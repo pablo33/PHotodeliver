@@ -1,0 +1,48 @@
+OK - Cambiar al modelo de Class
+
+	Class:
+		Número de foto
+		Cámara
+		fecha de toma
+		Fecha de modificación de archivo
+		Fecha toma obtenida de: metadato / filecreation / deducida por proximidad.
+		tipo de archivo multimedia (mimetipe)
+		Nombre del archivo
+		
+
+OK - Hacer un deliver para los vídeos que están entre las fotos. (hacer deliver por la proximidad de archivos de fotos)
+	Toma el dato de STAT, además añade una marca de fecha en el nombre del archivo. Para que no se pierda en caso de modificación.
+
+OK - Asignar fechas encontradas en el path, del archivo original. >> para varias máscaras.
+
+OK - Hacer un activity diagram del programa.
+
+OK - Opción de escanear el destino de las imágenes en busca de posibles imágenes y considerarlas en el evento y/o extraerlas para el evento.
+
+OK - Opción de renombrar los ficheros añadiendo un identificativo de la fecha de toma de la foto.
+
+OK - Hacer limpieza de carpetas vacías al mover archivos. (solo al nivel que está el item)
+	* La carpeta origin no será borrada aunque se quede vacía.
+	* Solo se analizarán carpetas que contenían items.
+
+OK - De las fotos que tengan el datetime en el nombre del archivo, renombrarlas si es que no lo tienen al principio del archivo. (ver última foto de islamágica)
+OK - Detectar las imágenes del guasap, año/mes/día.
+
+OK - Llevar los datos de entrada a un archivo de configuración.
+
+OK - Incluir parámetro para no mover los archivos __de origen__ más recientes de una fecha (cantidad de tiempo) y dejarlos en su sitio.
+
+OK - Si el directorio comienza por una fecha YYYY-MM-AA, Tomar el resto de la cadena de texto del directorio como metadato para el nombre del álbum. 
+
+OK - Si alguna rama del camino termina en guión bajo, se considera album y no se incluye. Se preserva su estado.
+
+OK - Ignorar además de .Trashes las carpetas que .Thumbnails que son más basura.
+
+
+Incluir módulo para que admita ejecución desde línea de comandos.
+	* Ejecución cómo servicio y carpetas vigiladas.
+	* Ejecución singular con carpetas origen y destino. (override de la configuración de usuario pre-establecida)
+
+
+
+
