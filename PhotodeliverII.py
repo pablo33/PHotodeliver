@@ -53,14 +53,15 @@ else:
 originlocation = '%(home)s/originlocation'  #  Path from where retrieve new images.
 destination = '%(home)s/destlocation'  # 'Path to where you want to store your photos'
 renamemovies = True  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
-renamephotos = True  # This option adds a creation date in media file-names (util if you want to modify them)
-eventminpictures = 8  # minimun number of pictures to assign a day-event
+renamephotos = True  # This option adds a creation date in media file-names (useful if you want to modify them)
+eventminpictures = 8  # minimum number of pictures to assign a day-event
 gap = 60*60*5  # number of seconds between shots to be considered both pictures to the same event.
 copymode = 'm'  # 'c' for copy or 'm' to move new files
 considerdestinationitems = True  # Consider destination items in order to group media files in events.
 moveexistentfiles = False  # True / False ...... True for move/reagroup or False to keep existent files at its place (Do nothing).
 ignoreTrash = True  # True / False .... Ignore paths starting with '.Trash'
 preservealbums = True  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
+forceassignfromfilename = True  # True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
 cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
 latestmediagap = 6*30*24*60*60  # Seconds from 'now' to consider that item is one of the lattest media. You can override interact with this media.
 donotmovelastmedia = True  # True / False ..... True means that the new lattest media will not be moved from its place.
@@ -86,6 +87,7 @@ considerdestinationitems = Photodelivercfg.considerdestinationitems  # Consider 
 moveexistentfiles = Photodelivercfg.moveexistentfiles  # True for move/reagroup or False to keep existent files at its place (Do nothing).
 ignoreTrash = Photodelivercfg.ignoreTrash  # Ignore paths starting with '.Trash'
 preservealbums = Photodelivercfg.preservealbums  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
+forceassignfromfilename = Photodelivercfg.forceassignfromfilename  #  True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
 cleaning = Photodelivercfg.cleaning  # Cleans empty folders (only folders that had contained photos)
 latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now' to consider a media-file is one of the latest 
 donotmovelastmedia = Photodelivercfg.donotmovelastmedia  # Flag to move or not move the latest media bunch.
@@ -273,7 +275,6 @@ class mediafile:
 		self.serialtype = 'filename'
 		self.fnDateTimeOriginal = None  # From start we asume that there is not a full date-time in file's name
 		sf = False  # serial number flag, True if some serial number if found
-		
 		# Date
 		# We are going to collect information about dates of creation. from the less to the most.
 		# Try to find some date structure in folder paths. (abspath)
@@ -358,7 +359,7 @@ class mediafile:
 				self.fnmonth = mo.group ('month')
 				logging.info( 'found possible year-month in'+self.abspath+':'+self.fnyear+" "+self.fnmonth)
 
-		# C3 (Year-month-day)
+		# C3: (Year-month-day)
 		expr = "(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d)[-_ /]?(?P<day>[0-3]\d)"
 		mo = re.search(expr, self.abspath)
 		try:
@@ -373,7 +374,7 @@ class mediafile:
 				logging.info( 'found possible year-month-day in' + self.abspath + ':' + self.fnyear + " " + self.fnmonth + " " + self.fnday)
 
 
-		# C4 : YYYYMMDD-HHMMSS  in filename
+		# C4: YYYYMMDD-HHMMSS  in filename
 		expr = '(?P<year>[12]\d{3})(?P<month>[01]\d)(?P<day>[0-3]\d)[-_ ]?(?P<hour>[012]\d)(?P<min>[0-5]\d)(?P<sec>[0-5]\d)'
 		mo = re.search (expr, i)
 		try:
@@ -390,6 +391,8 @@ class mediafile:
 			self.fnsec   = mo.group ('sec')
 			logging.info ( 'found full date identifier in ' + i)
 			logging.debug ( i + " : " + " ".join( [mo.group('year'), mo.group('month'), mo.group('day'), mo.group('hour'), mo.group('min'), mo.group('sec') ]))
+			if forceassignfromfilename == True:
+				assignfromfilename = True
 			if mo.start() == 0 :
 				logging.debug ('filename starts with a full date identifier: '+ i )
 				self.imdateserial = True  #  True means that filename starts with full-date serial in its name (item will not add any date in his filename again)
@@ -476,7 +479,7 @@ class mediafile:
 		self.TimeOriginal = None # From start we assign None if no matches are found.
 
 		# Set Creation Date from Metadata if it is found,
-		if self.DateTimeOriginal != None :
+		if self.DateTimeOriginal != None and assignfromfilename == True:
 			self.TimeOriginal = time.strptime (self.DateTimeOriginal, '%Y:%m:%d %H:%M:%S')
 			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
 			logging.info ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
@@ -561,6 +564,9 @@ def mediascan(location, filteryears=''):
 # ===========================================
 # ========= Main module =====================
 # ===========================================
+
+#0) Initializing Global variables
+assignfromfilename = False  # Force assign date from filename.
 
 # 1) Get items
 # 1.1) Get origin location

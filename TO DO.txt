@@ -38,6 +38,10 @@ OK - Si alguna rama del camino termina en guión bajo, se considera album y no s
 
 OK - Ignorar además de .Trashes las carpetas que .Thumbnails que son más basura.
 
+OK - Hacer un flag para que prevalezca la fecha encontrada en el nombre del archivo a la del dato EXIF.  La fecha debe ser completa YYYYMMDD-HHMMSS.
+
+Los álbumes encontrados en la carpeta origin deben ser procesados igualmente, pero solamente copiar tal cual e incluir la fecha de las imágenes dentro de los nombres de los archivos encontrados.
+
 
 Incluir módulo para que admita ejecución desde línea de comandos.
 	* Ejecución cómo servicio y carpetas vigiladas.
