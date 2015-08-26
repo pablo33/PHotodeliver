@@ -479,14 +479,15 @@ class mediafile:
 		self.TimeOriginal = None # From start we assign None if no matches are found.
 
 		# Set Creation Date from Metadata if it is found,
-		if self.DateTimeOriginal != None and assignfromfilename == True:
+		if self.DateTimeOriginal != None :
 			self.TimeOriginal = time.strptime (self.DateTimeOriginal, '%Y:%m:%d %H:%M:%S')
 			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
 			logging.info ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
-			return
+			if forceassignfromfilename == False :
+				return
 
 		# Set Creation Date extracted from filename/path
-		if self.fnDateTimeOriginal != None:
+		if self.fnDateTimeOriginal != None :
 			self.TimeOriginal = time.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
 			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
 			logging.info ('Image Creation date has been set from File path / name: '+ str(time.asctime(self.TimeOriginal)))
@@ -565,8 +566,7 @@ def mediascan(location, filteryears=''):
 # ========= Main module =====================
 # ===========================================
 
-#0) Initializing Global variables
-assignfromfilename = False  # Force assign date from filename.
+assignfromfilename = False
 
 # 1) Get items
 # 1.1) Get origin location
@@ -609,6 +609,7 @@ else:
 
 print ('len Allitemscl', len(Allitemscl))
 for i in Allitemscl:
+	print ('Time Since Epoch:', i.TimeSinceEpoch)
 	if i.TimeSinceEpoch != None:
 		AllCreationtimes.append ( i.TimeSinceEpoch )
 
@@ -620,6 +621,7 @@ itemsdayflag = dict ()  # our group counter, if true
 # groups shoots in "gaps" assigning the earliest day of the group.
 # this will assign for each Epochtime an Epochtime wich is the earliest groups of shoots!
 # float-event changes when next shoot is far away from our 'gap'.
+
 
 # Initializing first element.
 floatevent = AllCreationtimes [0]
