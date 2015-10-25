@@ -4,8 +4,10 @@
 	it will group files in foldes due to its date of creation '''
 
 # Module import
-import sys, os, shutil, logging, datetime, time, pyexiv2, re
+import sys, os, shutil, logging, datetime, time, re
 from glob import glob
+from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
+
 
 # ================================
 # =========  Utils ===============
@@ -98,7 +100,7 @@ filterboost = Photodelivercfg.filterboost
 
 
 # Internal variables.
-moviesmedia = ['mov','avi','m4v', 'mpg', '3gp']
+moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
 wantedmedia = ['jpg','jpeg','raw','png'] + moviesmedia
 dummy = False  #  True / False   __  When True Do not perform any file movements. Play on dummy mode.
 justif = 20  #  number of characters to justify logging info.
@@ -215,6 +217,7 @@ class mediafile:
 		self.filename:	filename without extension (str)
 		self.fileext:	filename extension (str)
 		self.fileTepoch:Time since Epoch of file creation (stat)
+		self.filebytes:	file-lenght in bytes
 
 		self.imdateserial: True / False  Means that filename has a full date in its filename
 		self.imserie:	serie clasification (IMG, PICT, \tfulldate, \tnoserial)
@@ -255,6 +258,8 @@ class mediafile:
 		self.filename, self.fileext = os.path.splitext (os.path.basename (self.abspath))
 		self.fileext = self.fileext.lower()
 		self.fileTepoch = os.path.getmtime (self.abspath)
+		# Fetch file long in bytes
+		self.filebytes = os.path.getsize(self.abspath)
 		logging.info ('## item: '+ self.abspath)
 		logging.info ('fileTepoch (from Stat): '.ljust( justif ) + str(self.fileTepoch))
 		# Fetch serie and serial number if any
@@ -441,27 +446,30 @@ class mediafile:
 		self.DateTimeOriginal = None
 		if self.fileext not in ['.jpg', '.jpeg', '.raw', '.png']:
 			return
-		metadata = pyexiv2.ImageMetadata(self.abspath)
-		metadata.read()
+		metadata = GExiv2.Metadata(self.abspath)
+		#metadata.read() # delete this line
 		
 		self.ImageModel = self.__readmetadate__( metadata ,'Exif.Image.Model')
 		self.ImageMake = self.__readmetadate__( metadata ,'Exif.Image.Make')
 		self.DateTimeOriginal = self.__readmetadate__( metadata ,'Exif.Photo.DateTimeOriginal')
-		if self.DateTimeOriginal != None:
-			mo = re.search ( '(?P<year>[12]\d{3}):(?P<month>[01]\d):(?P<day>[0-3]\d) (?P<hour>[012]\d):(?P<min>[0-5]\d):(?P<sec>[0-5]\d)', self.DateTimeOriginal)
+		if self.DateTimeOriginal == None:
+			self.DateTimeOriginal = self.__readmetadate__( metadata ,'Exif.Photo.DateTimeDigitized')
+			if self.DateTimeOriginal == None:
+				self.DateTimeOriginal = self.__readmetadate__( metadata ,'Exif.Image.DateTime')
+				if self.DateTimeOriginal == None: return
 
-			self.mtyear  = mo.group ('year')
-			self.mtmonth = mo.group ('month')
-			self.mtday   = mo.group ('day')
-			self.mthour  = mo.group ('hour')
-			self.mtmin   = mo.group ('min')
-			self.mtsec   = mo.group ('sec')
+		mo = re.search ( '(?P<year>[12]\d{3}):(?P<month>[01]\d):(?P<day>[0-3]\d) (?P<hour>[012]\d):(?P<min>[0-5]\d):(?P<sec>[0-5]\d)', self.DateTimeOriginal)
+
+		self.mtyear  = mo.group ('year')
+		self.mtmonth = mo.group ('month')
+		self.mtday   = mo.group ('day')
+		self.mthour  = mo.group ('hour')
+		self.mtmin   = mo.group ('min')
+		self.mtsec   = mo.group ('sec')
 
 	def __readmetadate__ (self, metadata, exif_key):
-		try:
-			metadate = metadata[ exif_key ].raw_value
-		except:
-			metadate = None
+		metadate = metadata.get(exif_key)
+		if metadate == None:
 			logging.info ('No '+ exif_key + 'in item: '+ self.abspath)
 		else:
 			logging.info (exif_key + ' found in: '+ self.abspath +' ('+metadate+')')
