@@ -98,7 +98,7 @@ filterboost = Photodelivercfg.filterboost
 
 
 # Internal variables.
-moviesmedia = ['mov','avi','m4v', 'mpg', '3gp']
+moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
 wantedmedia = ['jpg','jpeg','raw','png'] + moviesmedia
 dummy = False  #  True / False   __  When True Do not perform any file movements. Play on dummy mode.
 justif = 20  #  number of characters to justify logging info.
@@ -215,6 +215,7 @@ class mediafile:
 		self.filename:	filename without extension (str)
 		self.fileext:	filename extension (str)
 		self.fileTepoch:Time since Epoch of file creation (stat)
+		self.filebytes:	file-lenght in bytes
 
 		self.imdateserial: True / False  Means that filename has a full date in its filename
 		self.imserie:	serie clasification (IMG, PICT, \tfulldate, \tnoserial)
@@ -255,6 +256,8 @@ class mediafile:
 		self.filename, self.fileext = os.path.splitext (os.path.basename (self.abspath))
 		self.fileext = self.fileext.lower()
 		self.fileTepoch = os.path.getmtime (self.abspath)
+		# Fetch file long in bytes
+		self.filebytes = os.path.getsize(self.abspath)
 		logging.info ('## item: '+ self.abspath)
 		logging.info ('fileTepoch (from Stat): '.ljust( justif ) + str(self.fileTepoch))
 		# Fetch serie and serial number if any
