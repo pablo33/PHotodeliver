@@ -447,7 +447,6 @@ class mediafile:
 		if self.fileext not in ['.jpg', '.jpeg', '.raw', '.png']:
 			return
 		metadata = GExiv2.Metadata(self.abspath)
-		#metadata.read() # delete this line
 		
 		self.ImageModel = self.__readmetadate__( metadata ,'Exif.Image.Model')
 		self.ImageMake = self.__readmetadate__( metadata ,'Exif.Image.Make')
