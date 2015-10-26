@@ -40,7 +40,16 @@ OK - Ignorar además de .Trashes las carpetas que .Thumbnails que son más basur
 
 OK - Hacer un flag para que prevalezca la fecha encontrada en el nombre del archivo a la del dato EXIF.  La fecha debe ser completa YYYYMMDD-HHMMSS.
 
+
+OK 25/10/2015 - ***  Migrar a la librería gexiv2  ***
+		*************************************
+
+Meter en una carpeta los items duplicados encontrados. >> Hacer una rutina de renombrado para soltar el item y renombrarlo en caso de que haya otro igual existente.
+
+Incluir una restricción de capacidad para "las últimas fotos", además de la del "rango de tiempo" de las últimas fotos. Por ejemplo, necesitaría mover los archivos que excedieran de una cantidad de bytes determinados, pej, 2.000.000.000 de bytes. y dejar los ficheros más modernos.
+
 Los álbumes encontrados en la carpeta origin deben ser procesados igualmente, pero solamente copiar tal cual e incluir la fecha de las imágenes dentro de los nombres de los archivos encontrados.
+
 
 
 Incluir módulo para que admita ejecución desde línea de comandos.
