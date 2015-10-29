@@ -45,6 +45,11 @@ OK 25/10/2015 - ***  Migrar a la librería gexiv2  ***
 		*************************************
 
 Meter en una carpeta los items duplicados encontrados. >> Hacer una rutina de renombrado para soltar el item y renombrarlo en caso de que haya otro igual existente.
+	>> Añadir parámetro en configuración para enviar fotos que parecen estar duplicadas.
+	>> Conservar la misma estructura de carpetas origen al copiar / mover los duplicados.
+	>> ¿crear un archivo HTML con los enlaces para clicar y ver coincidencias?.....
+	>> .... o lanzar las miniaturas para previsualizarlas????
+
 
 Incluir una restricción de capacidad para "las últimas fotos", además de la del "rango de tiempo" de las últimas fotos. Por ejemplo, necesitaría mover los archivos que excedieran de una cantidad de bytes determinados, pej, 2.000.000.000 de bytes. y dejar los ficheros más modernos.
 

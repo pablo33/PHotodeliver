@@ -8,6 +8,12 @@ import sys, os, shutil, logging, datetime, time, re
 from glob import glob
 from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
 
+# Internal variables.
+moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
+wantedmedia = ['jpg','jpeg','raw','png'] + moviesmedia
+dummy = False  #  True / False   __  When True Do not perform any file movements. Play on dummy mode.
+justif = 20  #  number of characters to justify logging info.
+
 
 # ================================
 # =========  Utils ===============
@@ -99,13 +105,6 @@ filterboost = Photodelivercfg.filterboost
 # TO DO
 
 
-# Internal variables.
-moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
-wantedmedia = ['jpg','jpeg','raw','png'] + moviesmedia
-dummy = False  #  True / False   __  When True Do not perform any file movements. Play on dummy mode.
-justif = 20  #  number of characters to justify logging info.
-
-
 # ===============================
 # The logging module.
 # ===============================
@@ -159,7 +158,6 @@ if itemcheck(destination) != 'folder':
 	logging.critical('Source folder does not exist')
 	print ('Exitting....')
 	exit()
-
 
 def lsdirectorytree( directory = os.getenv( 'HOME')):
 	""" Returns a list of a directory and its child directories
@@ -721,32 +719,37 @@ for i in Allitemscl:
 		print ('the file does not need to be moved:', a)
 		logging.warning('this file remains at the same location:'+dest)
 	else:		
+		if itemcheck (dest) != '':
+			print ('destination for this item already exists', a)
+			logging.warning('destination item already exists:' + dest)
+			dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
+			finalcopymode == 'm'
 		if itemcheck (os.path.dirname(dest)) == '':
 			if dummy == False:
 				os.makedirs (os.path.dirname(dest))
-		if itemcheck (dest) == '':
-			if finalcopymode == 'm' :
-				if dummy == False:
-					shutil.move (a, dest)
-				print ('FILE MOVED:', a, dest)
-				logging.info('file successfully moved: '+ dest)
-				# Clening empty directories
-				if cleaning == True:
-					scandir = os.path.dirname (a)
-					contents = glob (os.path.join(scandir,'*'))
-					print (contents)
-					if len (contents) == 0 and scandir != os.path.normpath(originlocation):
-						if dummy == False:
-							shutil.rmtree (scandir)
-						print ('\n','deleting dir:', scandir,'\n')
-						logging.info ('Directory %s has been deleted (was empty)'%(a,))
-			else:
-				if dummy == False:
-					shutil.copy (a, dest)
-				print ('FILE COPIED:', a, dest)
-				logging.info('file successfully copied: '+ dest)
+		if finalcopymode == 'm' :
+			if dummy == False:
+				shutil.move (a, dest)
+			print ('FILE MOVED:', a, dest)
+			logging.info('file successfully moved: '+ dest)
+			# Clening empty directories
+			if cleaning == True:
+				scandir = os.path.dirname (a)
+				contents = glob (os.path.join(scandir,'*'))
+				print (contents)
+				if len (contents) == 0 and scandir != os.path.normpath(originlocation):
+					if dummy == False:
+						shutil.rmtree (scandir)
+					print ('\n','deleting dir:', scandir,'\n')
+					logging.info ('Directory %s has been deleted (was empty)'%(a,))
 		else:
-			print ('destination for this item already exists', a)
-			logging.warning('destination item already exists:'+dest)
+			if dummy == False:
+				shutil.copy (a, dest)
+			print ('FILE COPIED:', a, dest)
+			logging.info('file successfully copied: '+ dest)
+
+			# 
+			# Makedirs
+			# move file
 
 # 4) check empty directories, cleaning ones.
