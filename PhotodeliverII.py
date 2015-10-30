@@ -711,45 +711,47 @@ for i in Allitemscl:
 			if eventname != '':
 				eventname = " "+ eventname
 			dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
-			# dest = os.path.join(___XXXX____ , os.path.basename(dest))
-			# Conformar el nuevo destino con el nombre del evento.
 
 	# Perform file operations
 	if a == dest :
 		print ('the file does not need to be moved:', a)
 		logging.warning('this file remains at the same location:'+dest)
-	else:		
+	else:
 		if itemcheck (dest) != '':
 			print ('destination for this item already exists', a)
 			logging.warning('destination item already exists:' + dest)
-			dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
-			finalcopymode == 'm'
-		if itemcheck (os.path.dirname(dest)) == '':
-			if dummy == False:
-				os.makedirs (os.path.dirname(dest))
-		if finalcopymode == 'm' :
-			if dummy == False:
-				shutil.move (a, dest)
-			print ('FILE MOVED:', a, dest)
-			logging.info('file successfully moved: '+ dest)
-			# Clening empty directories
-			if cleaning == True:
-				scandir = os.path.dirname (a)
-				contents = glob (os.path.join(scandir,'*'))
-				print (contents)
-				if len (contents) == 0 and scandir != os.path.normpath(originlocation):
+			if i.filebytes == os.path.getsize(dest): #___bytes are equal ___:
+				finalcopymode = 'd'
+				print ('Duplicated file has been deleted. (same name and size)', a)
+				logging.info ('Duplicated file has been deleted. (same name and size):' + a )
+				if dummy == False:
+					os.remove (a)
+			else:
+				dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
+				finalcopymode = 'm'
+		if finalcopymode != 'd' :
+			if itemcheck (os.path.dirname(dest)) == '':
 					if dummy == False:
-						shutil.rmtree (scandir)
-					print ('\n','deleting dir:', scandir,'\n')
-					logging.info ('Directory %s has been deleted (was empty)'%(a,))
-		else:
-			if dummy == False:
-				shutil.copy (a, dest)
-			print ('FILE COPIED:', a, dest)
-			logging.info('file successfully copied: '+ dest)
+						os.makedirs (os.path.dirname(dest))
+			if finalcopymode == 'c':
+				if dummy == False:
+					shutil.copy (a, dest)
+				print ('FILE COPIED:', a, dest)
+				logging.info('file successfully copied: '+ dest)
+				continue
+			else:
+				if dummy == False:
+					shutil.move (a, dest)
+				print ('FILE MOVED:', a, dest)
+				logging.info('file successfully moved: '+ dest)
 
-			# 
-			# Makedirs
-			# move file
-
-# 4) check empty directories, cleaning ones.
+		# Clening empty directories
+		if cleaning == True:
+			scandir = os.path.dirname (a)
+			contents = glob (os.path.join(scandir,'*'))
+			print (contents)
+			if len (contents) == 0 and scandir != os.path.normpath(originlocation):
+				if dummy == False:
+					shutil.rmtree (scandir)
+				print ('\n','deleting dir:', scandir,'\n')
+				logging.info ('Directory %s has been deleted (was empty)'%(a,))
