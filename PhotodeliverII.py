@@ -428,7 +428,7 @@ if len (errmsgs) != 0 :
 	print ('\nplease revise your config file or your command line arguments.','Use --help or -h for some help.','\n ....exitting',sep='\n')
 	exit()
 
-# Running parameters
+# adding to log file Running parameters
 for a in parametersdyct:
 	logging.info (a+'\t'+parametersdyct[a]+' = '+ str ( eval(parametersdyct[a])))
 
@@ -532,8 +532,8 @@ class mediafile:
 		self.fileTepoch = os.path.getmtime (self.abspath)
 		# Fetch file long in bytes
 		self.filebytes = os.path.getsize(self.abspath)
-		logging.info ('## item: '+ self.abspath)
-		logging.info ('fileTepoch (from Stat): '.ljust( justif ) + str(self.fileTepoch))
+		logging.debug ('## item: '+ self.abspath)
+		logging.debug ('fileTepoch (from Stat): '.ljust( justif ) + str(self.fileTepoch))
 		# Fetch serie and serial number if any
 		self.__imageserie__(self.filename)
 		# Fetch image metadata (if any) 
@@ -587,7 +587,7 @@ class mediafile:
 		# Removig not wanted slashes
 		if '' in pathlevels:
 			pathlevels.remove('')
-		logging.info ('Found directories levels: '+str(pathlevels))
+		logging.debug ('Found directories levels: '+str(pathlevels))
 		# Starting variables. From start, we assume that there is no date at all.
 		self.fnyear = None
 		self.fnmonth = None
@@ -606,14 +606,14 @@ class mediafile:
 				pass
 			else:
 				self.fnyear = mo.group ('year')
-				logging.info( 'found possible year in'+'/'+word+'/'+':'+self.fnyear)
+				logging.debug( 'found possible year in'+'/'+word+'/'+':'+self.fnyear)
 				continue
 
 					#possible month is a level path:
 			if len (word) == 2 and word.isnumeric () and self.fnyear != None:
 				if int(word) in range(1,13):
 					self.fnmonth = word
-					logging.info( 'found possible month in'+'/'+word+'/'+':'+self.fnmonth)
+					logging.debug( 'found possible month in'+'/'+word+'/'+':'+self.fnmonth)
 					continue
 
 					#possible day is a level path:
@@ -634,7 +634,7 @@ class mediafile:
 			if int (mo.group('month')) in range (1,13):
 				self.fnyear = mo.group ('year')
 				self.fnmonth = mo.group ('month')
-				logging.info( 'found possible year-month in'+self.abspath+':'+self.fnyear+" "+self.fnmonth)
+				logging.debug( 'found possible year-month in'+self.abspath+':'+self.fnyear+" "+self.fnmonth)
 
 		# C3: (Year-month-day)
 		expr = "(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d)[-_ /]?(?P<day>[0-3]\d)"
@@ -648,7 +648,7 @@ class mediafile:
 				self.fnyear = mo.group ('year')
 				self.fnmonth = mo.group ('month')
 				self.fnday = mo.group ('day')
-				logging.info( 'found possible year-month-day in' + self.abspath + ':' + self.fnyear + " " + self.fnmonth + " " + self.fnday)
+				logging.debug( 'found possible year-month-day in' + self.abspath + ':' + self.fnyear + " " + self.fnmonth + " " + self.fnday)
 
 
 		# C4: YYYYMMDD-HHMMSS  in filename
@@ -666,7 +666,7 @@ class mediafile:
 			self.fnhour  = mo.group ('hour')
 			self.fnmin   = mo.group ('min')
 			self.fnsec   = mo.group ('sec')
-			logging.info ( 'found full date identifier in ' + i)
+			logging.debug ( 'found full date identifier in ' + i)
 			logging.debug ( i + " : " + " ".join( [mo.group('year'), mo.group('month'), mo.group('day'), mo.group('hour'), mo.group('min'), mo.group('sec') ]))
 			if forceassignfromfilename == True:
 				assignfromfilename = True
@@ -678,7 +678,7 @@ class mediafile:
 		# setting creation date
 		if self.fnyear != None and self.fnmonth != None:
 			textdate = '%s:%s:%s %s:%s:%s'%(self.fnyear, self.fnmonth, self.fnday, self.fnhour, self.fnmin, self.fnsec)
-			logging.info ('This date have been retrieved from the file-path-name: ' + textdate )
+			logging.debug ('This date have been retrieved from the file-path-name: ' + textdate )
 			self.fnDateTimeOriginal = textdate
 
 		# Serial number
@@ -701,7 +701,7 @@ class mediafile:
 				continue
 			else:
 				mo = re.search ( serialdict[expr], i)
-				logging.info ("expression %s found in %s" %(expr, i))
+				logging.debug ("expression %s found in %s" %(expr, i))
 				sf = True
 				break
 
@@ -712,7 +712,7 @@ class mediafile:
 		else:
 			self.imserie  = '\tnoserial'
 			self.imserial = ''	
-		logging.info ( 'Item serie and serial number (' + i + '): '+ self.imserie + ' ' +  self.imserial)
+		logging.debug ( 'Item serie and serial number (' + i + '): '+ self.imserie + ' ' +  self.imserial)
 
 	def __imagemetadata__(self):
 		self.DateTimeOriginal = None
@@ -741,9 +741,9 @@ class mediafile:
 	def __readmetadate__ (self, metadata, exif_key):
 		metadate = metadata.get(exif_key)
 		if metadate == None:
-			logging.info ('No '+ exif_key + 'in item: '+ self.abspath)
+			logging.debug ('No '+ exif_key + 'in item: '+ self.abspath)
 		else:
-			logging.info (exif_key + ' found in: '+ self.abspath +' ('+metadate+')')
+			logging.debug (exif_key + ' found in: '+ self.abspath +' ('+metadate+')')
 			print (exif_key, ':', metadate)
 		return metadate
 
@@ -761,7 +761,7 @@ class mediafile:
 		if self.DateTimeOriginal != None :
 			self.TimeOriginal = time.strptime (self.DateTimeOriginal, '%Y:%m:%d %H:%M:%S')
 			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-			logging.info ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
+			logging.debug ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
 			if forceassignfromfilename == False :
 				return
 
@@ -769,7 +769,7 @@ class mediafile:
 		if self.fnDateTimeOriginal != None :
 			self.TimeOriginal = time.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
 			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-			logging.info ('Image Creation date has been set from File path / name: '+ str(time.asctime(self.TimeOriginal)))
+			logging.debug ('Image Creation date has been set from File path / name: '+ str(time.asctime(self.TimeOriginal)))
 			return
 
 		# Set Creation Date from stat file.
@@ -783,12 +783,12 @@ class mediafile:
 		if self.abspath.find('DCIM') != -1:
 			self.TimeOriginal = time.gmtime (self.fileTepoch)
 			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-			logging.info ( "Image Creation date has been set from File stat" )
+			logging.debug ( "Image Creation date has been set from File stat" )
 			return
 
 		if self.TimeOriginal == None:
 			self.TimeSinceEpoch = None
-			logging.info ( "Can't guess Image date of Creation" )
+			logging.debug ( "Can't guess Image date of Creation" )
 
 
 def mediascan(location, filteryears=''):
@@ -816,14 +816,14 @@ def mediascan(location, filteryears=''):
 	for i in itemlist:
 		if ignoreTrash == True : 
 			if i.find ('.Trash') != -1 :
-				logging.info ('Item %s was not included (Trash folder)' %(i) )
+				logging.debug ('Item %s was not included (Trash folder)' %(i) )
 				continue
 			if i.find ('.thumbnails') != -1 :
-				logging.info ('Item %s was not included (Thumbnails folder)' %(i) )
+				logging.debug ('Item %s was not included (Thumbnails folder)' %(i) )
 				continue
 		if preservealbums == True :
 			if i.find ('_/') != -1 :
-				logging.info ('Item %s was not included (Preserving album folder)' %(i) )
+				logging.debug ('Item %s was not included (Preserving album folder)' %(i) )
 				continue
 		if filterboost == True :
 			include = False	
@@ -832,7 +832,7 @@ def mediascan(location, filteryears=''):
 					if "/"+a+"/" in i:
 						include = True
 				if include == False:
-					logging.info ('Item %s was not included. Out of filter-year range ' %(i) )
+					logging.debug ('Item %s was not included. Out of filter-year range ' %(i) )
 					continue
 		item = mediafile(i)
 		itemsclasslist.append (item)
@@ -866,18 +866,20 @@ if considerdestinationitems == True:
 	itemscle, destinationyears = mediascan (destination, originyears)
 	if itemscle == '':
 		print ('Nothing to scan at destination location (', destination, ')')
-		logging.info ('Thereis nothing to import at destination location: ' + destination)
+		logging.warning ('Thereis nothing to import at destination location: ' + destination)
 
 if len (itemscl) + len (itemscle) == 0:
 	print ('Nothing to import / reagroup.')
-	logging.info ('Thereis nothing to import or reagroup, exitting....')
+	logging.warning ('Thereis nothing to import or reagroup, exitting....')
 	exit()
+
 
 logging.info ('%s new files scanned.' %(len (itemscl)))
 logging.info ('%s existent files scanned.' %(len (itemscle)))
 
 
-# 1.3) ordering list items into a new list.
+# 1.2) Processing items 
+# ordering list items into a new list.
 AllCreationtimes = list()
 if itemscl != '' and  itemscle != '':
 	Allitemscl = itemscl + itemscle
@@ -971,7 +973,7 @@ for i in Allitemscl:
 			continue
 	
 	elif donotmovelastmedia == True and ((time.time () - i.TimeSinceEpoch) < latestmediagap) : 
-		logging.info ('Doing nothing with this file, is inthe gap of the latest files and donotmovelastmedia is set to True.' + a)
+		logging.debug ('Doing nothing with this file, is inthe gap of the latest files and donotmovelastmedia is set to True.' + a)
 		continue
 		
 	# 
@@ -997,7 +999,7 @@ for i in Allitemscl:
 			if i.filebytes == os.path.getsize(dest): #___bytes are equal ___:
 				finalcopymode = 'd'
 				print ('Duplicated file has been deleted. (same name and size)', a)
-				logging.info ('Duplicated file has been deleted. (same name and size):' + a )
+				logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
 				if dummy == False:
 					os.remove (a)
 			else:
@@ -1011,13 +1013,13 @@ for i in Allitemscl:
 				if dummy == False:
 					shutil.copy (a, dest)
 				print ('FILE COPIED:', a, dest)
-				logging.info('file successfully copied: '+ dest)
+				logging.debug('file successfully copied: '+ dest)
 				continue
 			else:
 				if dummy == False:
 					shutil.move (a, dest)
 				print ('FILE MOVED:', a, dest)
-				logging.info('file successfully moved: '+ dest)
+				logging.debug('file successfully moved: '+ dest)
 
 		# Clening empty directories
 		if cleaning == True:
@@ -1028,4 +1030,4 @@ for i in Allitemscl:
 				if dummy == False:
 					shutil.rmtree (scandir)
 				print ('\n','deleting dir:', scandir,'\n')
-				logging.info ('Directory %s has been deleted (was empty)'%(a,))
+				logging.debug ('Directory %s has been deleted (was empty)'%(a,))
