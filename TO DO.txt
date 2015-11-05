@@ -54,11 +54,14 @@ OK 02/11/2015 Incluir módulo para que admita ejecución desde línea de comando
 
 OK 03/11/2015 Clean log messages. INFO / DEBUG / WARNINGS
 
-Los álbumes encontrados en la carpeta origin deben ser procesados igualmente, pero solamente copiar tal cual e incluir la fecha de las imágenes dentro de los nombres de los archivos encontrados.
+
+OK 05/11/2015 Los álbumes encontrados en la carpeta origin deben ser procesados igualmente, pero solamente copiar tal cual, e incluir la fecha de las imágenes dentro de los nombres de los archivos encontrados.
+
+OK Limpieza de mensajes en consola
+OK bug eliminado cuando el programa corre y hay archivos de video pero no de fotografías.
 
 
 ADD a final info message at log file.
-
 
 Incluir una restricción de capacidad para "las últimas fotos", además de la del "rango de tiempo" de las últimas fotos. Por ejemplo, necesitaría mover los archivos que excedieran de una cantidad de bytes determinados, pej, 2.000.000.000 de bytes. y dejar los ficheros más modernos.
 

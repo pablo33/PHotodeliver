@@ -744,7 +744,7 @@ class mediafile:
 			logging.debug ('No '+ exif_key + 'in item: '+ self.abspath)
 		else:
 			logging.debug (exif_key + ' found in: '+ self.abspath +' ('+metadate+')')
-			print (exif_key, ':', metadate)
+			#print (exif_key, ':', metadate)
 		return metadate
 
 	def __decidecreationtime__ (self):
@@ -821,10 +821,12 @@ def mediascan(location, filteryears=''):
 			if i.find ('.thumbnails') != -1 :
 				logging.debug ('Item %s was not included (Thumbnails folder)' %(i) )
 				continue
+		'''
 		if preservealbums == True :
 			if i.find ('_/') != -1 :
 				logging.debug ('Item %s was not included (Preserving album folder)' %(i) )
 				continue
+		'''
 		if filterboost == True :
 			include = False	
 			if len (filteryears) > 0 :
@@ -838,7 +840,6 @@ def mediascan(location, filteryears=''):
 		itemsclasslist.append (item)
 		if item.TimeOriginal != None:
 			rangeyears.add (time.strftime('%Y', item.TimeOriginal))
-		print (i, rangeyears)
 	return itemsclasslist, rangeyears
 
 # ===========================================
@@ -848,7 +849,7 @@ def mediascan(location, filteryears=''):
 assignfromfilename = False
 
 # 1) Get items
-# 1.1) Get origin location
+# 1.1) Retrieving items to process
 
 itemscl = ''
 if originlocation != '' :
@@ -888,9 +889,9 @@ elif itemscl != '' :
 else:
 	Allitemscl = itemscle
 
-print ('len Allitemscl', len(Allitemscl))
+#print ('len Allitemscl', len(Allitemscl))
 for i in Allitemscl:
-	print ('Time Since Epoch:', i.TimeSinceEpoch)
+	#print ('Time Since Epoch:', i.TimeSinceEpoch)
 	if i.TimeSinceEpoch != None:
 		AllCreationtimes.append ( i.TimeSinceEpoch )
 
@@ -903,27 +904,27 @@ itemsdayflag = dict ()  # our group counter, if true
 # this will assign for each Epochtime an Epochtime wich is the earliest groups of shoots!
 # float-event changes when next shoot is far away from our 'gap'.
 
+if len(AllCreationtimes)>0 :
+	# Initializing first element.
+	floatevent = AllCreationtimes [0]
+	itemdict[AllCreationtimes[0]] = floatevent
+	itemsdayflag [floatevent] = 1
 
-# Initializing first element.
-floatevent = AllCreationtimes [0]
-itemdict[AllCreationtimes[0]] = floatevent
-itemsdayflag [floatevent] = 1
+	ct = 0
+	for t in AllCreationtimes:
+		ct += 1 # counter to fetch next element.
+		if ct >= len (AllCreationtimes): # So we check the next element, we do not want to check out of the list range.
+			break
 
-ct = 0
-for t in AllCreationtimes:
-	ct += 1 # counter to fetch next element.
-	if ct >= len (AllCreationtimes): # So we check the next element, we do not want to check out of the list range.
-		break
+		if AllCreationtimes [ct] - t > gap:
+			# new event
+			floatevent = AllCreationtimes [ct]
+		
+		itemdict[AllCreationtimes[ct]] = floatevent # we set an "floatevent" for every Epoch-item-Time
 
-	if AllCreationtimes [ct] - t > gap:
-		# new event
-		floatevent = AllCreationtimes [ct]
-	
-	itemdict[AllCreationtimes[ct]] = floatevent # we set an "floatevent" for every Epoch-item-Time
-
-	if itemsdayflag.get (floatevent) == None:
-		itemsdayflag [floatevent] = 0
-	itemsdayflag [floatevent] = itemsdayflag.get (floatevent) + 1
+		if itemsdayflag.get (floatevent) == None:
+			itemsdayflag [floatevent] = 0
+		itemsdayflag [floatevent] = itemsdayflag.get (floatevent) + 1
 
 
 #3) Deliver items
@@ -931,36 +932,45 @@ for i in Allitemscl:
 	event = False
 	eventname = ''
 	a = i.abspath  # item's fullpath and filename
-	if i.TimeOriginal == None:
-		dest = os.path.join(destination, "nodate", os.path.basename(a))
+
+	if preservealbums == True and a.find ('_/') != -1 :
+		if a.startswith (destination) :
+			logging.debug ('Item %s was not included (Preserving album folder at destination location)' %(a) )
+			continue
+		else:
+			dest = os.path.join(destination, a[len(originlocation)+1:]) # Just to moving to destination preserving path
 
 	else:
-		# Check origin dir Structure for an already event name
-		expr = "/[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
-		mo = re.search(expr, a)
-		try:
-			mo.group()
-		except:
-			pass
-		else:
-			# retrieve the name & set Even-Flag to True
-			eventname = mo.group('XeventnameX')
-			event = True
-			logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
+		if i.TimeOriginal == None:
+			dest = os.path.join(destination, "nodate", os.path.basename(a))
 
-		# Getting a possible event day
-		itemcreation = i.TimeOriginal
-			# deliver
-		if event == True or (itemsdayflag [ itemdict[i.TimeSinceEpoch] ] >= eventminpictures ):
-			#destination includes a day - event
-			dest = os.path.join(destination, str(itemcreation.tm_year), '-'.join([str(itemcreation.tm_year), to2(itemcreation.tm_mon), to2(itemcreation.tm_mday)]), os.path.basename(a))
-			event = True
 		else:
-			#destination only includes a month (go to a various month-box)
-			dest = os.path.join(destination,str(itemcreation.tm_year), '-'.join([str(itemcreation.tm_year), to2(itemcreation.tm_mon)]), os.path.basename(a))
-		# set date information in filename if it is a movie.
-		if ((renamemovies == True and i.fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and i.fileext.lower()[1:] in wantedmedia)) and i.imdateserial != True :
-			dest = os.path.join(os.path.dirname(dest), time.strftime('%Y%m%d_%H%M%S', itemcreation ) + "-" + os.path.basename(dest) )
+			# Check origin dir Structure for an already event name
+			expr = "/[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
+			mo = re.search(expr, a)
+			try:
+				mo.group()
+			except:
+				pass
+			else:
+				# retrieve the name & set Even-Flag to True
+				eventname = mo.group('XeventnameX')
+				event = True
+				logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
+
+			# Getting a possible event day
+			itemcreation = i.TimeOriginal
+				# deliver
+			if event == True or (itemsdayflag [ itemdict[i.TimeSinceEpoch] ] >= eventminpictures ):
+				#destination includes a day - event
+				dest = os.path.join(destination, str(itemcreation.tm_year), '-'.join([str(itemcreation.tm_year), to2(itemcreation.tm_mon), to2(itemcreation.tm_mday)]), os.path.basename(a))
+				event = True
+			else:
+				#destination only includes a month (go to a various month-box)
+				dest = os.path.join(destination,str(itemcreation.tm_year), '-'.join([str(itemcreation.tm_year), to2(itemcreation.tm_mon)]), os.path.basename(a))
+			# set date information in filename if it is a movie.
+			if ((renamemovies == True and i.fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and i.fileext.lower()[1:] in wantedmedia)) and i.imdateserial != True :
+				dest = os.path.join(os.path.dirname(dest), time.strftime('%Y%m%d_%H%M%S', itemcreation ) + "-" + os.path.basename(dest) )
 
 	# Reagroup existent items if necessary
 	finalcopymode = copymode
@@ -990,15 +1000,15 @@ for i in Allitemscl:
 
 	# Perform file operations
 	if a == dest :
-		print ('the file does not need to be moved:', a)
+		#print ('the file does not need to be moved:', a)
 		logging.warning('this file remains at the same location:'+dest)
 	else:
 		if itemcheck (dest) != '':
-			print ('destination for this item already exists', a)
+			#print ('destination for this item already exists', a)
 			logging.warning('destination item already exists:' + dest)
 			if i.filebytes == os.path.getsize(dest): #___bytes are equal ___:
 				finalcopymode = 'd'
-				print ('Duplicated file has been deleted. (same name and size)', a)
+				#print ('Duplicated file has been deleted. (same name and size)', a)
 				logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
 				if dummy == False:
 					os.remove (a)
@@ -1012,22 +1022,25 @@ for i in Allitemscl:
 			if finalcopymode == 'c':
 				if dummy == False:
 					shutil.copy (a, dest)
-				print ('FILE COPIED:', a, dest)
+				#print ('FILE COPIED:', a, dest)
 				logging.debug('file successfully copied: '+ dest)
 				continue
 			else:
 				if dummy == False:
 					shutil.move (a, dest)
-				print ('FILE MOVED:', a, dest)
+				#print ('FILE MOVED:', a, dest)
 				logging.debug('file successfully moved: '+ dest)
 
 		# Clening empty directories
 		if cleaning == True:
 			scandir = os.path.dirname (a)
 			contents = glob (os.path.join(scandir,'*'))
-			print (contents)
+			#print (contents)
 			if len (contents) == 0 and scandir != os.path.normpath(originlocation):
 				if dummy == False:
 					shutil.rmtree (scandir)
-				print ('\n','deleting dir:', scandir,'\n')
+				#print ('\n','deleting dir:', scandir,'\n')
 				logging.debug ('Directory %s has been deleted (was empty)'%(a,))
+#4) Done
+print ('Done!')
+''' print a little resumen '''
