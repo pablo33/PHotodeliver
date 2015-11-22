@@ -56,6 +56,7 @@ parameterslist = [
 '-lmg',
 '-nmlm',
 '-fb',
+'-sfm',
 ]
 
 parametersdyct = {
@@ -75,6 +76,7 @@ parametersdyct = {
 '-lmg'	:	'latestmediagap',
 '-nmlm'	:	'donotmovelastmedia',
 '-fb'	: 	'filterboost',
+'-sfm'	: 	'storefilemetadata',
 }
 
 parametershelp = {
@@ -94,8 +96,8 @@ parametershelp = {
 '-lmg'	:	['Integer ......','Seconds from now to consider that item is one of the lattest media. You can override interact with this media.'],
 '-nmlm'	:	['True / False .....','True means that the new lattest media will not be moved from its place.'],
 '-fb'	: 	['True / False .......',' True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.'],
+'-sfm'	:	['True / False .......',' Store the guesed date in the filename as Exif data.'],
 }
-
 
 
 if True in [i in sys.argv for i in ['--help','-h']]:
@@ -153,6 +155,7 @@ cleaning = True  # True / False .....  Cleans empty folders (only folders that h
 latestmediagap = 6*30*24*60*60  # Seconds from 'now' to consider that item is one of the lattest media. You can override interact with this media.
 donotmovelastmedia = True  # True / False ..... True means that the new lattest media will not be moved from its place.
 filterboost = True  # True / False .......  True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.
+storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
 '''%{'home':os.getenv('HOME')}
 	)
 	f.close()
@@ -179,7 +182,7 @@ cleaning = Photodelivercfg.cleaning  # Cleans empty folders (only folders that h
 latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now' to consider a media-file is one of the latest 
 donotmovelastmedia = Photodelivercfg.donotmovelastmedia  # Flag to move or not move the latest media bunch.
 filterboost = Photodelivercfg.filterboost
-
+storefilemetadata = Photodelivercfg.storefilemetadata
 
 # Checking parameters to override user preferences.
 x = '-ol'
@@ -295,6 +298,14 @@ if x in paramdict:
 		filterboost = True
 	elif paramdict[x] == 'False':
 		filterboost = False
+
+x = '-sfm'
+if x in paramdict:
+	storefilemetadata = paramdict[x]
+	if paramdict[x] == 'True':
+		storefilemetadata = True
+	elif paramdict[x] == 'False':
+		storefilemetadata = False
 
 
 
@@ -421,12 +432,18 @@ if type (filterboost) is not bool :
 	errmsgs.append ('\nfilterboost parameter can only be True or False:\n-fb\t' + filterboost)
 	logging.critical('filterboost parameter is not True nor False')
 
+#-sfm
+if type (storefilemetadata) is not bool :
+	errmsgs.append ('\nstorefilemetadata parameter can only be True or False:\n-fb\t' + storefilemetadata)
+	logging.critical('storefilemetadata parameter is not True nor False')
+
 # exitting if errors econuntered
 if len (errmsgs) != 0 :
 	for a in errmsgs:
 		print (a)
 	print ('\nplease revise your config file or your command line arguments.','Use --help or -h for some help.','\n ....exitting',sep='\n')
 	exit()
+
 
 # adding to log file Running parameters
 for a in parametersdyct:
@@ -508,7 +525,7 @@ class mediafile:
 
 		self.ImageModel:	Camera model
 		self.ImageMake:		Camera Vendor
-		self.DateTimeOriginal:	Cration date-time  YYYY:MM:DD HH:mm:SS
+		self.DateTimeOriginal:	Cration date-time  YYYY:MM:DD HH:mm:SS  (datetime.datetime object)
 
 		self.mtyear:	year (date retrieved from metadata)
 		self.mtmonth:	month (date retrieved from metadata)
@@ -519,8 +536,9 @@ class mediafile:
 		self.camera:	camera model (retrieved from metadata)
 
 		<related to the class>
-		self.TimeOriginal:	media creation time
-		self.TimeSinceEpoch:	media creation time (Since Epoch)
+		self.TimeOriginal:	media creation time (time object)
+		self.TimeSinceEpoch:	media creation time (Since Epoch, float)
+		self.byteacumullated:	acumullated bytes at this position (from newer items to older ones)
 
 
 	"""
@@ -540,6 +558,7 @@ class mediafile:
 		self.__imagemetadata__()
 		# Decide creation time
 		self.__decidecreationtime__()
+		self.byteacumullated = 0
 
 	def __imageserie__(self, i):
 		""" Gets a serial number from the filename
@@ -765,26 +784,35 @@ class mediafile:
 			if forceassignfromfilename == False :
 				return
 
-		# Set Creation Date extracted from filename/path
-		if self.fnDateTimeOriginal != None :
-			self.TimeOriginal = time.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
-			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-			logging.debug ('Image Creation date has been set from File path / name: '+ str(time.asctime(self.TimeOriginal)))
-			return
+		if (self.fnDateTimeOriginal != None) or (self.abspath.find('DCIM') != -1):
+			# Set Creation Date extracted from filename/path
+			if self.fnDateTimeOriginal != None :
+				self.TimeOriginal = time.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
+				self.DateTimeOriginal = datetime.datetime.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
+				self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
+				logging.debug ('Image Creation date has been set from File path / name: '+ str(time.asctime(self.TimeOriginal)))
 
-		# Set Creation Date from stat file.
-		'''
-		(You only should use this if you have those pictures in the original media storage
-		without modifications and you want to read it directly from the media. or
-		The files have copied among filesystem that preserves the file creation date, usually ext3 ext4, NTFs, or MacOSx filesystems.
-		See file properties first and ensure that you can trust this fact. Anyway, the file only will be processed
-		if in its path is the word DCIM.)
-			'''
-		if self.abspath.find('DCIM') != -1:
-			self.TimeOriginal = time.gmtime (self.fileTepoch)
-			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-			logging.debug ( "Image Creation date has been set from File stat" )
-			return
+			elif self.abspath.find('DCIM') != -1:
+				# Set Creation Date from stat file.
+				'''
+				(You only should use this if you have those pictures in the original media storage
+				without modifications and you want to read it directly from the media. or
+				The files have copied among filesystem that preserves the file creation date, usually ext3 ext4, NTFs, or MacOSx filesystems.
+				See file properties first and ensure that you can trust this fact. Anyway, the file only will be processed
+				if in its path is the word DCIM.)
+					'''
+				self.TimeOriginal = time.gmtime (self.fileTepoch)
+				self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
+				print (datetime.datetime.utcfromtimestamp(self.fileTepoch))
+				#print (time.asctime(self.TimeOriginal))
+				self.DateTimeOriginal = datetime.datetime.utcfromtimestamp(self.fileTepoch)
+				logging.debug ( "Image Creation date has been set from File stat" )
+
+			# Write metadata into the file-archive
+			if storefilemetadata == True :
+				metadata = GExiv2.Metadata(self.abspath)
+				metadata.set_date_time(self.DateTimeOriginal) 
+				metadata.save_file()
 
 		if self.TimeOriginal == None:
 			self.TimeSinceEpoch = None
@@ -851,6 +879,7 @@ assignfromfilename = False
 # 1) Get items
 # 1.1) Retrieving items to process
 
+originyears = ""
 itemscl = ''
 if originlocation != '' :
 	itemscl, originyears = mediascan (originlocation)
@@ -860,6 +889,10 @@ if originlocation != '' :
 		logging.warning ('Deactivating filterboost')
 		originyears = ''
 		filterboost = False
+	else:
+		# Inform the byte acumullated at intemscle
+		# self.byteacumullated
+		pass
 
 
 itemscle = ''

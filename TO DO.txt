@@ -60,10 +60,12 @@ OK 05/11/2015 Los álbumes encontrados en la carpeta origin deben ser procesados
 OK Limpieza de mensajes en consola
 OK bug eliminado cuando el programa corre y hay archivos de video pero no de fotografías.
 
+OK 22/11/2015 añadido parámetro para que se inserte la fecha como dato EXIF si la imagen no lo tuviera.
 
-ADD a final info message at log file.
+
 
 Incluir una restricción de capacidad para "las últimas fotos", además de la del "rango de tiempo" de las últimas fotos. Por ejemplo, necesitaría mover los archivos que excedieran de una cantidad de bytes determinados, pej, 2.000.000.000 de bytes. y dejar los ficheros más modernos.
+ADD a final info message at log file.
 
 
 
