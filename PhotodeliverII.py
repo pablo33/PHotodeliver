@@ -624,9 +624,10 @@ class mediafile:
 			except:
 				pass
 			else:
-				self.fnyear = mo.group ('year')
-				logging.debug( 'found possible year in'+'/'+word+'/'+':'+self.fnyear)
-				continue
+				if int(mo.group('year')) in range (1970, 2038):
+					self.fnyear = mo.group ('year')
+					logging.debug( 'found possible year in'+'/'+word+'/'+':'+self.fnyear)
+					continue
 
 					#possible month is a level path:
 			if len (word) == 2 and word.isnumeric () and self.fnyear != None:
@@ -650,7 +651,7 @@ class mediafile:
 		except:
 			pass
 		else:
-			if int (mo.group('month')) in range (1,13):
+			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (1970, 2038):
 				self.fnyear = mo.group ('year')
 				self.fnmonth = mo.group ('month')
 				logging.debug( 'found possible year-month in'+self.abspath+':'+self.fnyear+" "+self.fnmonth)
@@ -663,7 +664,7 @@ class mediafile:
 		except:
 			pass
 		else:
-			if int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
+			if int(mo.group('year')) in range (1970, 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
 				self.fnyear = mo.group ('year')
 				self.fnmonth = mo.group ('month')
 				self.fnday = mo.group ('day')
@@ -679,19 +680,20 @@ class mediafile:
 			logging.debug ("expression %s Not found in %s" %(expr, i))
 			pass
 		else:			
-			self.fnyear  = mo.group ('year')
-			self.fnmonth = mo.group ('month')
-			self.fnday   = mo.group ('day')
-			self.fnhour  = mo.group ('hour')
-			self.fnmin   = mo.group ('min')
-			self.fnsec   = mo.group ('sec')
-			logging.debug ( 'found full date identifier in ' + i)
-			logging.debug ( i + " : " + " ".join( [mo.group('year'), mo.group('month'), mo.group('day'), mo.group('hour'), mo.group('min'), mo.group('sec') ]))
-			if forceassignfromfilename == True:
-				assignfromfilename = True
-			if mo.start() == 0 :
-				logging.debug ('filename starts with a full date identifier: '+ i )
-				self.imdateserial = True  #  True means that filename starts with full-date serial in its name (item will not add any date in his filename again)
+			if int(mo.group('year')) in range (1970, 2038):
+				self.fnyear  = mo.group ('year')
+				self.fnmonth = mo.group ('month')
+				self.fnday   = mo.group ('day')
+				self.fnhour  = mo.group ('hour')
+				self.fnmin   = mo.group ('min')
+				self.fnsec   = mo.group ('sec')
+				logging.debug ( 'found full date identifier in ' + i)
+				logging.debug ( i + " : " + " ".join( [mo.group('year'), mo.group('month'), mo.group('day'), mo.group('hour'), mo.group('min'), mo.group('sec') ]))
+				if forceassignfromfilename == True:
+					assignfromfilename = True
+				if mo.start() == 0 :
+					logging.debug ('filename starts with a full date identifier: '+ i )
+					self.imdateserial = True  #  True means that filename starts with full-date serial in its name (item will not add any date in his filename again)
 
 
 		# setting creation date
