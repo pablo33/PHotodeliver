@@ -809,7 +809,7 @@ class mediafile:
 				logging.debug ( "Image Creation date has been set from File stat" )
 
 			# Write metadata into the file-archive
-			if storefilemetadata == True :
+			if storefilemetadata == True and self.fileext.lower()[1:] not in moviesmedia:
 				metadata = GExiv2.Metadata(self.abspath)
 				metadata.set_date_time(self.DateTimeOriginal) 
 				metadata.save_file()
