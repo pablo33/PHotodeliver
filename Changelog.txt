@@ -67,8 +67,6 @@ OK 22/11/2015 añadido parámetro para que se inserte la fecha como dato EXIF si
 - *** Migrar y utilizar SQLite3 para las transacciones ***
   ********************************************************
 
-
-Incluir una restricción de capacidad para "las últimas fotos", además de la del "rango de tiempo" de las últimas fotos. Por ejemplo, necesitaría mover los archivos que excedieran de una cantidad de bytes determinados, pej, 2.000.000.000 de bytes. y dejar los ficheros más modernos.
 ADD a final info message at log file.
 
 

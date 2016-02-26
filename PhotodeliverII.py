@@ -588,7 +588,7 @@ class mediafile:
 				one of the path folders is a month numbers
 
 			Combos:
-				one of the path folders is YYYY-MM
+				one of the path folders starts with YYYY-MM
 
 			Full date:
 				there is a full-date structure on the path.
@@ -644,7 +644,7 @@ class mediafile:
 					continue
 
 		# C2 (Year-month)
-		expr = "(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d)"
+		expr = ".*(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d).*"
 		mo = re.search(expr, self.abspath)
 		try:
 			mo.group()
@@ -812,11 +812,13 @@ class mediafile:
 
 			# Write metadata into the file-archive
 			if storefilemetadata == True and self.fileext.lower()[1:] not in moviesmedia:
-				metadata = GExiv2.Metadata(self.abspath)
-				metadata.set_date_time(self.DateTimeOriginal) 
-				metadata.save_file()
+				if dummy == False:
+					metadata = GExiv2.Metadata(self.abspath)
+					metadata.set_date_time(self.DateTimeOriginal)
+					metadata.save_file()
+				logging.debug("writed metadata to image file.", )
 
-		if self.TimeOriginal == None:
+		if self.TimeOriginal == None :
 			self.TimeSinceEpoch = None
 			logging.debug ( "Can't guess Image date of Creation" )
 
