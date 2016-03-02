@@ -565,6 +565,8 @@ class mediafile:
 		Try to retrieve the date of creation from file name / path
 
 		"""
+		global assignfromfilename
+
 		self.imdateserial = False  # 
 		self.imserie = ''
 		self.imserial = ''
@@ -614,6 +616,7 @@ class mediafile:
 		self.fnhour = '12'
 		self.fnmin = '00'
 		self.fnsec = '00'
+		mintepoch = 1900
 		# C1 - /*Year*/ /month/ /day/ in pathlevels (year must be detected from an upper level first)
 		for word in pathlevels:
 				#possible year is a level path:
@@ -624,7 +627,7 @@ class mediafile:
 			except:
 				pass
 			else:
-				if int(mo.group('year')) in range (1970, 2038):
+				if int(mo.group('year')) in range (mintepoch, 2038):
 					self.fnyear = mo.group ('year')
 					logging.debug( 'found possible year in'+'/'+word+'/'+':'+self.fnyear)
 					continue
@@ -651,10 +654,12 @@ class mediafile:
 		except:
 			pass
 		else:
-			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (1970, 2038):
+			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (mintepoch, 2038):
 				self.fnyear = mo.group ('year')
 				self.fnmonth = mo.group ('month')
 				logging.debug( 'found possible year-month in'+self.abspath+':'+self.fnyear+" "+self.fnmonth)
+				if forceassignfromfilename == True:
+					assignfromfilename = True
 
 		# C3: (Year-month-day)
 		expr = "(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d)[-_ /]?(?P<day>[0-3]\d)"
@@ -664,11 +669,13 @@ class mediafile:
 		except:
 			pass
 		else:
-			if int(mo.group('year')) in range (1970, 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
+			if int(mo.group('year')) in range (mintepoch, 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
 				self.fnyear = mo.group ('year')
 				self.fnmonth = mo.group ('month')
 				self.fnday = mo.group ('day')
 				logging.debug( 'found possible year-month-day in' + self.abspath + ':' + self.fnyear + " " + self.fnmonth + " " + self.fnday)
+				if forceassignfromfilename == True:
+					assignfromfilename = True
 
 
 		# C4: YYYYMMDD-HHMMSS  in filename
@@ -680,7 +687,7 @@ class mediafile:
 			logging.debug ("expression %s Not found in %s" %(expr, i))
 			pass
 		else:			
-			if int(mo.group('year')) in range (1970, 2038):
+			if int(mo.group('year')) in range (mintepoch, 2038):
 				self.fnyear  = mo.group ('year')
 				self.fnmonth = mo.group ('month')
 				self.fnday   = mo.group ('day')
@@ -779,11 +786,13 @@ class mediafile:
 		self.TimeOriginal = None # From start we assign None if no matches are found.
 
 		# Set Creation Date from Metadata if it is found,
-		if self.DateTimeOriginal != None :
-			self.TimeOriginal = time.strptime (self.DateTimeOriginal, '%Y:%m:%d %H:%M:%S')
-			self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-			logging.debug ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
-			if forceassignfromfilename == False :
+		if self.DateTimeOriginal != None:
+			if assignfromfilename == True:
+				logging.info ("Timestamp metadata was found, but I'll try to assign this date from the filename (forceassignfromfilename = True)")
+			else:
+				self.TimeOriginal = time.strptime (self.DateTimeOriginal, '%Y:%m:%d %H:%M:%S')
+				self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
+				logging.debug ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
 				return
 
 		if (self.fnDateTimeOriginal != None) or (self.abspath.find('DCIM') != -1):
@@ -799,8 +808,8 @@ class mediafile:
 				'''
 				(You only should use this if you have those pictures in the original media storage
 				without modifications and you want to read it directly from the media. or
-				The files have copied among filesystem that preserves the file creation date, usually ext3 ext4, NTFs, or MacOSx filesystems.
-				See file properties first and ensure that you can trust this fact. Anyway, the file only will be processed
+				The files have been copied among filesystem that preserves the file creation date, usually ext3 ext4, NTFs, or MacOSx filesystems.
+				See file properties first and ensure that you can trust its date of creation. Anyway, the file only will be processed
 				if in its path is the word DCIM.)
 					'''
 				self.TimeOriginal = time.gmtime (self.fileTepoch)
@@ -983,6 +992,16 @@ for i in Allitemscl:
 
 		else:
 			# Check origin dir Structure for an already event name
+			expr = "/[12]\d{3}[-_ ]?[01]\d?(?P<XeventnameX>.*)/"
+			mo = re.search(expr, a)
+			try:
+				mo.group()
+			except:
+				pass
+			else:
+				event = True
+				eventname = mo.group('XeventnameX')
+
 			expr = "/[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
 			mo = re.search(expr, a)
 			try:
@@ -990,10 +1009,16 @@ for i in Allitemscl:
 			except:
 				pass
 			else:
-				# retrieve the name & set Even-Flag to True
-				eventname = mo.group('XeventnameX')
 				event = True
+				eventname = mo.group('XeventnameX')
+
+
+			# retrieve the name & set Even-Flag to True
+			if event == True:
 				logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
+
+
+
 
 			# Getting a possible event day
 			itemcreation = i.TimeOriginal
