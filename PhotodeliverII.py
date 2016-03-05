@@ -8,6 +8,7 @@
 import sys, os, shutil, logging, datetime, time, re
 from glob import glob
 from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
+from PIL import Image
 
 # Internal variables.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
@@ -57,6 +58,7 @@ parameterslist = [
 '-nmlm',
 '-fb',
 '-sfm',
+'-conv',
 ]
 
 parametersdyct = {
@@ -77,6 +79,7 @@ parametersdyct = {
 '-nmlm'	:	'donotmovelastmedia',
 '-fb'	: 	'filterboost',
 '-sfm'	: 	'storefilemetadata',
+'-conv'	:	'convert',
 }
 
 parametershelp = {
@@ -97,6 +100,7 @@ parametershelp = {
 '-nmlm'	:	['True / False .....','True means that the new lattest media will not be moved from its place.'],
 '-fb'	: 	['True / False .......',' True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.'],
 '-sfm'	:	['True / False .......',' Store the guesed date in the filename as Exif data.'],
+'-conv'	:	['True / False .......','Convert image format to JPG file'],
 }
 
 
@@ -156,6 +160,7 @@ latestmediagap = 6*30*24*60*60  # Seconds from 'now' to consider that item is on
 donotmovelastmedia = True  # True / False ..... True means that the new lattest media will not be moved from its place.
 filterboost = True  # True / False .......  True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.
 storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
+convert = True  # True / False ......  Try to convert image formats in JPG
 '''%{'home':os.getenv('HOME')}
 	)
 	f.close()
@@ -183,6 +188,7 @@ latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now'
 donotmovelastmedia = Photodelivercfg.donotmovelastmedia  # Flag to move or not move the latest media bunch.
 filterboost = Photodelivercfg.filterboost
 storefilemetadata = Photodelivercfg.storefilemetadata
+convert = Photodelivercfg.convert
 
 # Checking parameters to override user preferences.
 x = '-ol'
@@ -307,6 +313,13 @@ if x in paramdict:
 	elif paramdict[x] == 'False':
 		storefilemetadata = False
 
+x = '-conv'
+if x in paramdict:
+	convert = paramdict[x]
+	if paramdict[x] == 'True':
+		convert = True
+	elif paramdict[x] == 'False':
+		convert = False
 
 
 # ===============================
@@ -436,6 +449,11 @@ if type (filterboost) is not bool :
 if type (storefilemetadata) is not bool :
 	errmsgs.append ('\nstorefilemetadata parameter can only be True or False:\n-fb\t' + storefilemetadata)
 	logging.critical('storefilemetadata parameter is not True nor False')
+
+#-conv
+if type (convert) is not bool :
+	errmsgs.append ('\nconvert parameter can only be True or False:\n-conv\t' + convert)
+	logging.critical('convert parameter is not True nor False')
 
 # exitting if errors econuntered
 if len (errmsgs) != 0 :
@@ -818,6 +836,20 @@ class mediafile:
 				#print (time.asctime(self.TimeOriginal))
 				self.DateTimeOriginal = datetime.datetime.utcfromtimestamp(self.fileTepoch)
 				logging.debug ( "Image Creation date has been set from File stat" )
+
+			# Convert to JPG
+			if convert == True and self.fileext.lower() not in [".jpg", ".jpeg"]:
+				logging.info (self.abspath + ": se va a convertir a JPG")
+				imagen = Image.open (self.abspath)
+				imagenewpath = os.path.splitext(self.abspath)[0]+".jpg"
+				imagen.save (imagenewpath)
+				imagen.close()
+				logging.debug ("file was saved as .jpg")
+				os.remove (self.abspath)
+				logging.debug (self.fileext + "image was deleted.")
+				self.abspath = imagenewpath
+				self.fileext = os.path.splitext(self.abspath)[1]
+				print (self.fileext, self.abspath)
 
 			# Write metadata into the file-archive
 			if storefilemetadata == True and self.fileext.lower()[1:] not in moviesmedia:
