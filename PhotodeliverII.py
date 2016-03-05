@@ -679,7 +679,7 @@ class mediafile:
 
 
 		# C4: YYYYMMDD-HHMMSS  in filename
-		expr = '(?P<year>[12]\d{3})(?P<month>[01]\d)(?P<day>[0-3]\d)[-_ ]?(?P<hour>[012]\d)(?P<min>[0-5]\d)(?P<sec>[0-5]\d)'
+		expr = '(?P<year>[12]\d{3})[-_ .]?(?P<month>[01]\d)[-_ .]?(?P<day>[0-3]\d)[-_ .]?(?P<hour>[012]\d)[-_ .]?(?P<min>[0-5]\d)[-_ .]?(?P<sec>[0-5]\d)'
 		mo = re.search (expr, i)
 		try:
 			mo.group()
