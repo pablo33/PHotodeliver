@@ -8,3 +8,8 @@ This script injects the date of the image-take by selecting the most appropriate
 It also sets the files in a new hierarchic directory tree based on the metadata.
 
 Ideal for reporting EXIF data on old family photographs.
+
+
+Dependencies:
+needs ubuntu 14.04
+python3-pil  #  For image conversion
