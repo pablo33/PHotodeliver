@@ -12,7 +12,7 @@ from PIL import Image
 
 # Internal variables.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
-wantedmedia = ['jpg','jpeg','raw','png'] + moviesmedia
+wantedmedia = ['jpg','jpeg','raw','png','bmp'] + moviesmedia
 dummy = False  #  True / False   __  When True Do not perform any file movements. Play on dummy mode.
 justif = 20  #  number of characters to justify logging info.
 
@@ -838,8 +838,9 @@ class mediafile:
 				logging.debug ( "Image Creation date has been set from File stat" )
 
 			# Convert to JPG
-			if convert == True and self.fileext.lower() not in [".jpg", ".jpeg"]:
+			if convert == True and self.fileext.lower() not in [".jpg", ".jpeg"] and self.fileext.lower() in [".png",".bmp",]:
 				logging.info (self.abspath + ": se va a convertir a JPG")
+				print ("Converting to JPG: ", self.abspath)
 				imagen = Image.open (self.abspath)
 				imagenewpath = os.path.splitext(self.abspath)[0]+".jpg"
 				imagen.save (imagenewpath)
@@ -849,7 +850,7 @@ class mediafile:
 				logging.debug (self.fileext + "image was deleted.")
 				self.abspath = imagenewpath
 				self.fileext = os.path.splitext(self.abspath)[1]
-				print (self.fileext, self.abspath)
+				print ("Converted: ", self.abspath)
 
 			# Write metadata into the file-archive
 			if storefilemetadata == True and self.fileext.lower()[1:] not in moviesmedia:
