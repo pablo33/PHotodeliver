@@ -844,7 +844,7 @@ class mediafile:
 				imagen = Image.open (self.abspath)
 				imagenewpath = os.path.splitext(self.abspath)[0]+".jpg"
 				imagen.save (imagenewpath)
-				imagen.close()
+				#imagen.close()  # commented for ubuntu 14.10 comtabilitiy
 				logging.debug ("file was saved as .jpg")
 				os.remove (self.abspath)
 				logging.debug (self.fileext + "image was deleted.")
