@@ -9,11 +9,11 @@ import sys, os, shutil, logging, datetime, time, re
 from glob import glob
 from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
 from PIL import Image
+import argparse  # for command line arguments
 
 # Internal variables.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
 wantedmedia = ['jpg','jpeg','raw','png','bmp'] + moviesmedia
-dummy = False  #  True / False   __  When True Do not perform any file movements. Play on dummy mode.
 justif = 20  #  number of characters to justify logging info.
 
 
@@ -37,91 +37,6 @@ def to2(month):
 	else:
 		strmonth = "0" + str(month)
 	return strmonth
-
-# Retrieve cmd line parameters >>>>>>>>
-
-parameterslist = [
-'-ol',
-'-dl',
-'-rm',
-'-rp',
-'-minp',
-'-gap',
-'-cpmode',
-'-cdi',
-'-mef',
-'-it',
-'-pa',
-'-faff',
-'-clean',
-'-lmg',
-'-nmlm',
-'-fb',
-'-sfm',
-'-conv',
-]
-
-parametersdyct = {
-'-ol'	: 	'originlocation',
-'-dl'	: 	'destination',
-'-rm'	: 	'renamemovies',
-'-rp'	: 	'renamephotos',
-'-minp'	: 	'eventminpictures',
-'-gap'	: 	'gap',
-'-cpmode': 	'copymode',
-'-cdi'	: 	'considerdestinationitems',
-'-mef'	:	'moveexistentfiles',
-'-it'	:	'ignoreTrash',
-'-pa'	: 	'preservealbums',
-'-faff'	: 	'forceassignfromfilename',
-'-clean':	'cleaning',
-'-lmg'	:	'latestmediagap',
-'-nmlm'	:	'donotmovelastmedia',
-'-fb'	: 	'filterboost',
-'-sfm'	: 	'storefilemetadata',
-'-conv'	:	'convert',
-}
-
-parametershelp = {
-'-ol'	: 	['Path......','Path from where retrieve new images.'],
-'-dl'	: 	['Path......','Path to where you want to store your photos.'],
-'-rm'	: 	['True / False ......',"This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)."],
-'-rp'	: 	['True / False ......','This option adds a creation date in media file-names (useful if you want to modify them).'],
-'-minp'	: 	['Integer ......','Minimum number of pictures to assign a day-event.'],
-'-gap'	: 	['Integer ......','Number of seconds between shots to be considered both pictures to the same event.'],
-'-cpmode': 	['c or m ......',"'c' for copy or 'm' to move new files."],
-'-cdi'	: 	['True / False ......','Consider destination items in order to group media files in events.'],
-'-mef'	:	['True / False ......','True for move/reagroup or False to keep existent files at its place (Do nothing)'],
-'-it'	:	['True / False ....',"Ignore paths starting with '.Trash'"],
-'-pa'	: 	['True / False  ....','Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png '],
-'-faff'	: 	['True / False   ....','Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).'],
-'-clean':	['True / False .....',' Cleans empty folders (only folders that had contained photos)'],
-'-lmg'	:	['Integer ......','Seconds from now to consider that item is one of the lattest media. You can override interact with this media.'],
-'-nmlm'	:	['True / False .....','True means that the new lattest media will not be moved from its place.'],
-'-fb'	: 	['True / False .......',' True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.'],
-'-sfm'	:	['True / False .......',' Store the guesed date in the filename as Exif data.'],
-'-conv'	:	['True / False .......','Convert image format to JPG file'],
-}
-
-
-if True in [i in sys.argv for i in ['--help','-h']]:
-	print ('Showing parameters help:\n\n')
-	c = 62
-	for a in parameterslist:
-		print (a,'\t',parametershelp[a][0],end="")
-		h = parametershelp[a][1]
-		for b in range (0,len (h),c):
-			print ('\n\t\t',h[b:b+c],end="") 
-		print ('\n')
-	exit()
-
-paramdict = {}
-
-for a in range (1,len(sys.argv)-1,2) :
-	if sys.argv[a] in parametersdyct:
-		paramdict [sys.argv[a]] = sys.argv[a+1]
-		#print ( sys.argv[a] ,paramdict[sys.argv[a]])
-
 
 # Load user config:
 # Getting user folder to place log files....
@@ -170,157 +85,180 @@ convert = True  # True / False ......  Try to convert image formats in JPG
 	os.system ("gedit " + userfileconfig)
 	exit()
 
+
+# Retrieve cmd line parameters >>>>>>>>
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-ol", "--originlocation",
+                    help="Path from where retrieve new images.")
+parser.add_argument("-dl", "--destination",
+                    help="Path to where you want to store your photos.")
+parser.add_argument("-rm", "--renamemovies", choices = [1,0], type = int,
+                    help="This option adds a creation date in movies file-names (wich doesn't have Exif Metadata).")
+parser.add_argument("-rp", "--renamephotos", choices = [1,0], type = int,
+                    help="This option adds a creation date in media file-names (useful if you want to modify them).")
+parser.add_argument("-minp", "--eventminpictures", type = int,
+                    help="Minimum number of pictures to assign a day-event.")
+parser.add_argument("-gap", "--gap", type = int,
+                    help="Number of seconds between shots to be considered both pictures to the same event.")
+parser.add_argument("-cpmode", "--copymode", choices = ['c','m'],
+                    help="'c' for copy or 'm' to move new files.")
+parser.add_argument("-cdi", "--considerdestinationitems", choices = [1,0], type = int,
+                    help="Consider destination items in order to group media files in events.")
+parser.add_argument("-mef", "--moveexistentfiles", choices = [1,0], type = int,
+                    help="True for move/reagroup or False to keep existent files at its place (Do nothing)")
+parser.add_argument("-it", "--ignoreTrash", choices = [1,0], type = int,
+                    help="Ignore paths starting with '.Trash'")
+parser.add_argument("-pa", "--preservealbums", choices = [1,0], type = int,
+                    help="Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png ")
+parser.add_argument("-faff", "--forceassignfromfilename", choices = [1,0], type = int,
+                    help="Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).")
+parser.add_argument("-clean", "--cleaning", choices = [1,0], type = int,
+                    help="Cleans empty folders (only folders that had contained photos)")
+parser.add_argument("-lmg", "--latestmediagap", type = int,
+                    help="Seconds from now to consider that item is one of the lattest media. You can override interact with this media.")
+parser.add_argument("-nmlm", "--donotmovelastmedia", choices = [1,0], type = int,
+                    help="True means that the new lattest media will not be moved from its place.")
+parser.add_argument("-fb", "--filterboost", choices = [1,0], type = int,
+                    help="True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.")
+parser.add_argument("-sfm", "--storefilemetadata", choices = [1,0], type = int,
+                    help="Store the guesed date in the filename as Exif data.")
+parser.add_argument("-conv", "--convert", choices = [1,0], type = int,
+                    help="Convert image format to JPG file")
+parser.add_argument("-sc", "--showconfig", action="store_true",
+                    help="Show running parameters, args parameters, config file parameters & exit")
+parser.add_argument("-test", "--dummy", action="store_true",
+                    help="Do not perform any file movements. Play on dummy mode.")
+
+
+args = parser.parse_args()
+parametersdyct = {}
+
 # Getting variables.
-originlocation = Photodelivercfg.originlocation  #  Place from where retrieve media
-destination =  Photodelivercfg.destination  #  Place to store files once procesed
-renamemovies = Photodelivercfg.renamemovies  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
-renamephotos = Photodelivercfg.renamephotos  # This option adds a creation date in media file-names
-eventminpictures = Photodelivercfg.eventminpictures  # minimun number of pictures to assign a day-event
-gap = Photodelivercfg.gap  # number of seconds between shots to be considered both pictures to the same event.
-copymode = Photodelivercfg.copymode  # 'c' for copy or 'm' to move new files
-considerdestinationitems = Photodelivercfg.considerdestinationitems  # Consider destination items in order to group media files in events.
-moveexistentfiles = Photodelivercfg.moveexistentfiles  # True for move/reagroup or False to keep existent files at its place (Do nothing).
-ignoreTrash = Photodelivercfg.ignoreTrash  # Ignore paths starting with '.Trash'
-preservealbums = Photodelivercfg.preservealbums  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
-forceassignfromfilename = Photodelivercfg.forceassignfromfilename  #  True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
-cleaning = Photodelivercfg.cleaning  # Cleans empty folders (only folders that had contained photos)
-latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now' to consider a media-file is one of the latest 
-donotmovelastmedia = Photodelivercfg.donotmovelastmedia  # Flag to move or not move the latest media bunch.
-filterboost = Photodelivercfg.filterboost
-storefilemetadata = Photodelivercfg.storefilemetadata
-convert = Photodelivercfg.convert
+if args.originlocation == None:
+	originlocation =  Photodelivercfg.destination  #  Place to store files once procesed
+else:
+	originlocation = args.originlocation
+parametersdyct["originlocation"] = originlocation
 
-# Checking parameters to override user preferences.
-x = '-ol'
-if x in paramdict:
-	originlocation = paramdict[x]
 
-x = '-dl'
-if x in paramdict:
-	destination = paramdict[x]
+if args.destination == None:
+	destination =  Photodelivercfg.destination  #  Place to store files once procesed
+else:
+	destination = args.destination
+parametersdyct["destination"] = destination
 
-x = '-rm'
-if x in paramdict:
-	renamemovies = paramdict[x]
-	if paramdict[x] == 'True':
-		renamemovies = True
-	elif paramdict[x] == 'False':
-		renamemovies = False
 
-x = '-rp'
-if x in paramdict:
-	renamephotos = paramdict[x]
-	if paramdict[x] == 'True':
-		renamephotos = True
-	elif paramdict[x] == 'False':
-		renamephotos = False
+if args.renamemovies == None:
+	renamemovies = Photodelivercfg.renamemovies  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
+else:
+	renamemovies = [False,True][args.renamemovies]
+parametersdyct["renamemovies"] = renamemovies
 
-x = '-minp'
-if x in paramdict:
-	try:
-		eventminpictures = int (paramdict[x])
-	except:
-		eventminpictures = paramdict[x]
 
-x = '-gap'
-if x in paramdict:
-	try:
-		gap = int (paramdict[x])
-	except:
-		gap = paramdict[x]
+if args.renamephotos == None:
+	renamephotos = Photodelivercfg.renamephotos  # This option adds a creation date in media file-names
+else:
+	renamephotos = [False,True][args.renamephotos]
+parametersdyct["renamephotos"] = renamephotos
 
-x = '-cpmode'
-if x in paramdict:
-	copymode = paramdict[x]
 
-x = '-cdi'
-if x in paramdict:
-	considerdestinationitems = paramdict[x]
-	if paramdict[x] == 'True':
-		considerdestinationitems = True
-	elif paramdict[x] == 'False':
-		considerdestinationitems = False
+if args.eventminpictures == None:
+	eventminpictures = Photodelivercfg.eventminpictures  # minimun number of pictures to assign a day-event
+else:
+	eventminpictures = args.eventminpictures
+parametersdyct["eventminpictures"] = eventminpictures
 
-x = '-mef'
-if x in paramdict:
-	moveexistentfiles = paramdict[x]
-	if paramdict[x] == 'True':
-		moveexistentfiles = True
-	elif paramdict[x] == 'False':
-		moveexistentfiles = False
 
-x = '-it'
-if x in paramdict:
-	ignoreTrash = paramdict[x]
-	if paramdict[x] == 'True':
-		ignoreTrash = True
-	elif paramdict[x] == 'False':
-		ignoreTrash = False
+if args.gap == None:
+	gap = Photodelivercfg.gap  # number of seconds between shots to be considered both pictures to the same event.
+else:
+	gap = args.gap
+parametersdyct["gap"] = gap
 
-x = '-pa'
-if x in paramdict:
-	preservealbums = paramdict[x]
-	if paramdict[x] == 'True':
-		preservealbums = True
-	elif paramdict[x] == 'False':
-		preservealbums = False
 
-x = '-faff'
-if x in paramdict:
-	forceassignfromfilename = paramdict[x]
-	if paramdict[x] == 'True':
-		forceassignfromfilename = True
-	elif paramdict[x] == 'False':
-		forceassignfromfilename = False
+if args.copymode == None:
+	copymode = Photodelivercfg.copymode  # 'c' for copy or 'm' to move new files
+else:
+	copymode = args.copymode
+parametersdyct["copymode"] = copymode
 
-x = '-clean'
-if x in paramdict:
-	cleaning = paramdict[x]
-	if paramdict[x] == 'True':
-		cleaning = True
-	elif paramdict[x] == 'False':
-		cleaning = False
 
-x = '-lmg'
-if x in paramdict:
-	latestmediagap = paramdict[x]
-	try:
-		latestmediagap = int (paramdict[x])
-	except:
-		latestmediagap = paramdict[x]
+if args.considerdestinationitems == None:
+	considerdestinationitems = Photodelivercfg.considerdestinationitems  # Consider destination items in order to group media files in events.
+else:
+	considerdestinationitems = [False,True][args.considerdestinationitems]
+parametersdyct["considerdestinationitems"] = considerdestinationitems
 
-x = '-nmlm'
-if x in paramdict:
-	donotmovelastmedia = paramdict[x]
-	if paramdict[x] == 'True':
-		donotmovelastmedia = True
-	elif paramdict[x] == 'False':
-		donotmovelastmedia = False
 
-x = '-fb'
-if x in paramdict:
-	filterboost = paramdict[x]
-	if paramdict[x] == 'True':
-		filterboost = True
-	elif paramdict[x] == 'False':
-		filterboost = False
+if args.moveexistentfiles == None:
+	moveexistentfiles = Photodelivercfg.moveexistentfiles  # True for move/reagroup or False to keep existent files at its place (Do nothing).
+else:
+	moveexistentfiles = [False,True][args.moveexistentfiles]
+parametersdyct["moveexistentfiles"] = moveexistentfiles
 
-x = '-sfm'
-if x in paramdict:
-	storefilemetadata = paramdict[x]
-	if paramdict[x] == 'True':
-		storefilemetadata = True
-	elif paramdict[x] == 'False':
-		storefilemetadata = False
 
-x = '-conv'
-if x in paramdict:
-	convert = paramdict[x]
-	if paramdict[x] == 'True':
-		convert = True
-	elif paramdict[x] == 'False':
-		convert = False
+if args.ignoreTrash == None:
+	ignoreTrash = Photodelivercfg.ignoreTrash  # Ignore paths starting with '.Trash'
+else:
+	ignoreTrash = [False,True][args.ignoreTrash]
+parametersdyct["ignoreTrash"] = ignoreTrash
 
+
+if args.preservealbums == None:
+	preservealbums = Photodelivercfg.preservealbums  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
+else:
+	preservealbums = [False,True][args.preservealbums]
+parametersdyct["preservealbums"] = preservealbums
+
+
+if args.forceassignfromfilename == None:
+	forceassignfromfilename = Photodelivercfg.forceassignfromfilename  #  True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
+else:
+	forceassignfromfilename = [False,True][args.forceassignfromfilename]
+parametersdyct["forceassignfromfilename"] = forceassignfromfilename
+
+
+if args.cleaning == None:
+	cleaning = Photodelivercfg.cleaning  # Cleans empty folders (only folders that had contained photos)
+else:
+	cleaning = [False,True][args.cleaning]
+parametersdyct["cleaning"] = cleaning
+
+
+if args.latestmediagap == None:
+	latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now' to consider a media-file is one of the latest 
+else:
+	latestmediagap = args.latestmediagap
+parametersdyct["latestmediagap"] = latestmediagap
+
+
+if args.donotmovelastmedia  == None:
+	donotmovelastmedia = Photodelivercfg.donotmovelastmedia  # Flag to move or not move the latest media bunch.
+else:
+	donotmovelastmedia = [False,True][args.donotmovelastmedia]
+parametersdyct["donotmovelastmedia"] = donotmovelastmedia
+
+
+if args.filterboost == None:
+	filterboost = Photodelivercfg.filterboost
+else:
+	filterboost = [False,True][args.filterboost]
+parametersdyct["filterboost"] = filterboost
+
+
+if args.storefilemetadata == None:
+	storefilemetadata = Photodelivercfg.storefilemetadata
+else:
+	storefilemetadata = [False,True][args.storefilemetadata]
+parametersdyct["storefilemetadata"] = storefilemetadata
+
+
+if args.convert == None:
+	convert = Photodelivercfg.convert
+else:
+	convert = [False,True][args.convert]
+parametersdyct["convert"] = convert
 
 # ===============================
 # The logging module.
@@ -372,87 +310,87 @@ else:
 		
 #-dl
 if itemcheck(destination) != 'folder':
-	errmsgs.append ('\nDestination folder does not exist:\n-dl\t' + destination)
+	errmsgs.append ('\nDestination folder does not exist:\n-dl\t' + str(destination))
 	logging.critical('Source folder does not exist')
  
 #-rm
 if type (renamemovies) is not bool :
-	errmsgs.append ('\nRenamemovies parameter can only be True or False:\n-rm\t' + renamemovies)
+	errmsgs.append ('\nRenamemovies parameter can only be True or False:\n-rm\t' + str(renamemovies))
 	logging.critical('renamemovies parameter is not True nor False')
 
 #-rp
 if type (renamephotos) is not bool :
-	errmsgs.append ('\nRenamephotos parameter can only be True or False:\n-rp\t' + renamephotos)
+	errmsgs.append ('\nRenamephotos parameter can only be True or False:\n-rp\t' + str(renamephotos))
 	logging.critical('renamephotos parameter is not True nor False')
 
 #-minp
 if type(eventminpictures) is not int :
-	errmsgs.append ('\neventminpictures parameter can only be an integer:\n-minp\t' + eventminpictures)
+	errmsgs.append ('\neventminpictures parameter can only be an integer:\n-minp\t' + str(eventminpictures))
 	logging.critical('eventminpictures parameter is not an integer')
 
 #-gap
 if type(gap) is not int :
-	errmsgs.append ('\ngap parameter can only be an integer:\n-gap\t' + gap)
+	errmsgs.append ('\ngap parameter can only be an integer:\n-gap\t' + str(gap))
 	logging.critical('gap parameter is not an integer')
 
 #-cpmode
 if copymode not in ['c','m'] :
-	errmsgs.append ('\ncopymode parameter can only be c or m:\n-copymode\t' + copymode)
+	errmsgs.append ('\ncopymode parameter can only be c or m:\n-copymode\t' + str(copymode))
 	logging.critical('copymode parameter is not c nor m')
 
 #-cdi
 if type (considerdestinationitems) is not bool :
-	errmsgs.append ('\nconsiderdestinationitems parameter can only be True or False:\n-cdi\t' + considerdestinationitems)
+	errmsgs.append ('\nconsiderdestinationitems parameter can only be True or False:\n-cdi\t' + str(considerdestinationitems))
 	logging.critical('considerdestinationitems parameter is not True nor False')
 
 #-mef
 if type (moveexistentfiles) is not bool :
-	errmsgs.append ('\nmoveexistentfiles parameter can only be True or False:\n-mef\t' + moveexistentfiles)
+	errmsgs.append ('\nmoveexistentfiles parameter can only be True or False:\n-mef\t' + str(moveexistentfiles))
 	logging.critical('moveexistentfiles parameter is not True nor False')
 
 #-it
 if type (ignoreTrash) is not bool :
-	errmsgs.append ('\nignoreTrash parameter can only be True or False:\n-it\t' + ignoreTrash)
+	errmsgs.append ('\nignoreTrash parameter can only be True or False:\n-it\t' + str(ignoreTrash))
 	logging.critical('ignoreTrash parameter is not True nor False')
 
 #-pa
 if type (preservealbums) is not bool :
-	errmsgs.append ('\npreservealbums parameter can only be True or False:\n-pa\t' + preservealbums)
+	errmsgs.append ('\npreservealbums parameter can only be True or False:\n-pa\t' + str(preservealbums))
 	logging.critical('preservealbums parameter is not True nor False')
 
 #-faff
 if type (forceassignfromfilename) is not bool :
-	errmsgs.append ('\nforceassignfromfilename parameter can only be True or False:\n-faff\t' + forceassignfromfilename)
+	errmsgs.append ('\nforceassignfromfilename parameter can only be True or False:\n-faff\t' + str(forceassignfromfilename))
 	logging.critical('forceassignfromfilename parameter is not True nor False')
 
 #-clean
 if type (cleaning) is not bool :
-	errmsgs.append ('\ncleaning parameter can only be True or False:\n-clean\t' + cleaning)
+	errmsgs.append ('\ncleaning parameter can only be True or False:\n-clean\t' + str(cleaning))
 	logging.critical('cleaning parameter is not True nor False')
 
 #-lmg
 if type(latestmediagap) is not int :
-	errmsgs.append ('\nlatestmediagap parameter can only be an integer:\n-lmg\t' + latestmediagap)
+	errmsgs.append ('\nlatestmediagap parameter can only be an integer:\n-lmg\t' + str(latestmediagap))
 	logging.critical('latestmediagap parameter is not an integer')
 
 #-nmlm
 if type (donotmovelastmedia) is not bool :
-	errmsgs.append ('\ndonotmovelastmedia parameter can only be True or False:\n-nmlm\t' + donotmovelastmedia)
+	errmsgs.append ('\ndonotmovelastmedia parameter can only be True or False:\n-nmlm\t' + str(donotmovelastmedia))
 	logging.critical('donotmovelastmedia parameter is not True nor False')
 
 #-fb
 if type (filterboost) is not bool :
-	errmsgs.append ('\nfilterboost parameter can only be True or False:\n-fb\t' + filterboost)
+	errmsgs.append ('\nfilterboost parameter can only be True or False:\n-fb\t' + str(filterboost))
 	logging.critical('filterboost parameter is not True nor False')
 
 #-sfm
 if type (storefilemetadata) is not bool :
-	errmsgs.append ('\nstorefilemetadata parameter can only be True or False:\n-fb\t' + storefilemetadata)
+	errmsgs.append ('\nstorefilemetadata parameter can only be True or False:\n-fb\t' + str(storefilemetadata))
 	logging.critical('storefilemetadata parameter is not True nor False')
 
 #-conv
 if type (convert) is not bool :
-	errmsgs.append ('\nconvert parameter can only be True or False:\n-conv\t' + convert)
+	errmsgs.append ('\nconvert parameter can only be True or False:\n-conv\t' + str(convert))
 	logging.critical('convert parameter is not True nor False')
 
 # exitting if errors econuntered
@@ -465,8 +403,16 @@ if len (errmsgs) != 0 :
 
 # adding to log file Running parameters
 for a in parametersdyct:
-	logging.info (a+'\t'+parametersdyct[a]+' = '+ str ( eval(parametersdyct[a])))
+	text = a + " = "+ str(parametersdyct[a]) + " \t (from args:"+ str(eval ("args." + a)) + ") \t (At config file: "+ str(eval ("Photodelivercfg." + a))+ ")"
+	logging.info (text)
+	if args.showconfig :
+		print (text+ "\n")
+if args.showconfig :
+	print ("exitting...")
+	exit()
 
+if args.dummy:
+	logging.info("-------------- Running in Dummy mode ------------")
 
 def lsdirectorytree( directory = os.getenv( 'HOME')):
 	""" Returns a list of a directory and its child directories
@@ -843,10 +789,12 @@ class mediafile:
 				print ("Converting to JPG: ", self.abspath)
 				imagen = Image.open (self.abspath)
 				imagenewpath = os.path.splitext(self.abspath)[0]+".jpg"
-				imagen.save (imagenewpath)
+				if args.dummy != True:
+					imagen.save (imagenewpath)
 				#imagen.close()  # commented for ubuntu 14.10 comtabilitiy
 				logging.debug ("file was saved as .jpg")
-				os.remove (self.abspath)
+				if args.dummy != True:
+					os.remove (self.abspath)
 				logging.debug (self.fileext + "image was deleted.")
 				self.abspath = imagenewpath
 				self.fileext = os.path.splitext(self.abspath)[1]
@@ -854,7 +802,7 @@ class mediafile:
 
 			# Write metadata into the file-archive
 			if storefilemetadata == True and self.fileext.lower()[1:] not in moviesmedia:
-				if dummy == False:
+				if args.dummy != True:
 					metadata = GExiv2.Metadata(self.abspath)
 					metadata.set_date_time(self.DateTimeOriginal)
 					metadata.save_file()
@@ -1105,23 +1053,23 @@ for i in Allitemscl:
 				finalcopymode = 'd'
 				#print ('Duplicated file has been deleted. (same name and size)', a)
 				logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
-				if dummy == False:
+				if args.dummy != True:
 					os.remove (a)
 			else:
 				dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
 				finalcopymode = 'm'
 		if finalcopymode != 'd' :
 			if itemcheck (os.path.dirname(dest)) == '':
-					if dummy == False:
+					if args.dummy != True:
 						os.makedirs (os.path.dirname(dest))
 			if finalcopymode == 'c':
-				if dummy == False:
+				if args.dummy != True:
 					shutil.copy (a, dest)
 				#print ('FILE COPIED:', a, dest)
 				logging.debug('file successfully copied: '+ dest)
 				continue
 			else:
-				if dummy == False:
+				if args.dummy != True:
 					shutil.move (a, dest)
 				#print ('FILE MOVED:', a, dest)
 				logging.debug('file successfully moved: '+ dest)
@@ -1132,7 +1080,7 @@ for i in Allitemscl:
 			contents = glob (os.path.join(scandir,'*'))
 			#print (contents)
 			if len (contents) == 0 and scandir != os.path.normpath(originlocation):
-				if dummy == False:
+				if args.dummy != True:
 					shutil.rmtree (scandir)
 				#print ('\n','deleting dir:', scandir,'\n')
 				logging.debug ('Directory %s has been deleted (was empty)'%(a,))
