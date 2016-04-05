@@ -1,13 +1,13 @@
 # PHotodeliver
 
 
-Script for automatic image's metadatation of image files stored in an informed folder tree structure .
+Script for automatic image metadatation and grouping by date.
 
-This script injects the date of the image by selecting the most appropriate image's date-taken on own EXIF metadata , text that involved in the path of the image, or the creation date of the file (STAT attribute of the filesystem). This data retrieved and is injected as EXIF metadata.
+- Group image files by date.
+- Inserts image's date metadata by retrieving it from the path/filename, or by the file-creation date.
+- Convert png files into jpg.
 
-It also sets the files in a new hierarchic directory tree based on the metadata.
-
-Ideal for reporting EXIF data on old family photographs.
+I use it to metadate for my old family photographs stored in folders whose date is stored as part of its path.
 
 
 Dependencies:
