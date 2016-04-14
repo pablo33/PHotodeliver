@@ -10,6 +10,7 @@ from glob import glob
 from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
 from PIL import Image
 import argparse  # for command line arguments
+import sqlite3
 
 # Internal variables.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
@@ -42,6 +43,8 @@ def to2(month):
 # Getting user folder to place log files....
 userpath = os.path.join(os.getenv('HOME'),".Photodeliver")
 userfileconfig = os.path.join(userpath,"Photodelivercfg.py")
+dbpath = os.path.join(userpath,"tmpDB.sqlite3")
+
 if itemcheck (userpath) != "folder":
 	os.makedirs(userpath)
 
@@ -136,7 +139,7 @@ parametersdyct = {}
 
 # Getting variables.
 if args.originlocation == None:
-	originlocation =  Photodelivercfg.destination  #  Place to store files once procesed
+	originlocation =  Photodelivercfg.originlocation  #  Place to store files once procesed
 else:
 	originlocation = args.originlocation
 parametersdyct["originlocation"] = originlocation
@@ -414,6 +417,14 @@ if args.showconfig :
 if args.dummy:
 	logging.info("-------------- Running in Dummy mode ------------")
 
+def readmetadate (metadata, exif_key):
+	metadate = metadata.get(exif_key)
+	if not (metadate == None or metadate.strip() == ''):
+		logging.debug (exif_key + ' found:' + metadate)
+	else:
+		logging.debug ('No '+ exif_key + 'found.')
+	return metadate
+
 def lsdirectorytree( directory = os.getenv( 'HOME')):
 	""" Returns a list of a directory and its child directories
 
@@ -441,7 +452,6 @@ def lsdirectorytree( directory = os.getenv( 'HOME')):
 			dirlist.append(a)
 	return dirlist
 
-
 def addchilddirectory(directorio):
 	""" Returns a list of child directories
 
@@ -459,451 +469,358 @@ def addchilddirectory(directorio):
 	# print ('este listado hay que añadirlo para el escaneo: ', paraañadir)
 	return paraañadir
 
+def mediaadd(item):
+	#1) Retrieve basic info from the file
+	logging.debug ('## item: '+ item)
+	abspath = item
+	filename, fileext = os.path.splitext(os.path.basename (abspath))
+	Statdate = datetime.datetime.utcfromtimestamp(os.path.getmtime (abspath))
+	filebytes = os.path.getsize(abspath)  # logging.debug ('fileTepoch (from Stat): '.ljust( justif ) + str(fileTepoch))
+	fnDateTimeOriginal = None  # From start we assume a no date found on the file path
 
-class mediafile:
-	""" This Class objet represents a media file.
-	It is initialized by passing file related absolute path as argument.
+	#2) Fetch date identificators form imagepath, serie and serial number if any. 
+	mintepoch = 1900  # In order to discard low year values, this is the lowest year. 
 
-	atributes:
-		<related to file>
-		self.abspath:	file absolute path (str)
-		self.filename:	filename without extension (str)
-		self.fileext:	filename extension (str)
-		self.fileTepoch:Time since Epoch of file creation (stat)
-		self.filebytes:	file-lenght in bytes
+	# Try to find some date structure in folder paths. (abspath)
+	''' Fetch dates from folder structure, this prevents losing information if exif metadata 
+	doesn't exist. Metada can be lost if you modify files with software. It is also usefull 
+	if you move video files (wich doesn't have exif metadata) among cloud services.
+	Pej. you can store a folder structure in your PC client dropbox, and you'll lose your "stat" date,
+	 but you can always recover it from file name/path.
+	Structures:
+		Years:
+			one of the path-folder starts as a year number with four numbers
+				[12]\d{3}    YYYY
+		Months:
+			one of the path folders is a month numbers
+		Combos:
+			one of the path folders starts with YYYY-MM
 
-		self.imdateserial: True / False  Means that filename has a full date in its filename
-		self.imserie:	serie clasification (IMG, PICT, \tfulldate, \tnoserial)
-		self.imserial:	serial number, number cast into a string ( 0002, 0001 ..... )
-		self.serialtype = 'filename'
+		Full date:
+			there is a full-date structure on the path.
+			2015-01-04 | 2015_01_04 | 2015:01:04 | 2015 01 04
 
-		self.fnyear:	year (date of file creation from filename)
-		self.fnmonth:	month (date of file creation from filename)
-		self.fnday:		day (date of file creation from filename)
-		self.fnhour:	hour (date of file creation from filename)
-		self.fnmin:		minutes (date of file creation from filename)
-		self.fnsec:		seconds (date of file creation from filename)
-		self.fnDateTimeOriginal: Creation date-time retrieved from filename)
-
-		<related to metadata>
-
-		self.ImageModel:	Camera model
-		self.ImageMake:		Camera Vendor
-		self.DateTimeOriginal:	Cration date-time  YYYY:MM:DD HH:mm:SS  (datetime.datetime object)
-
-		self.mtyear:	year (date retrieved from metadata)
-		self.mtmonth:	month (date retrieved from metadata)
-		self.mtday:		day (date retrieved from metadata)
-		self.mthour: 	hour (date retrieved from metadata)
-		self.mtmin:		min (date retrieved from metadata)
-		self.mtsec:		seconds (date retrieved from metadata)
-		self.camera:	camera model (retrieved from metadata)
-
-		<related to the class>
-		self.TimeOriginal:	media creation time (time object)
-		self.TimeSinceEpoch:	media creation time (Since Epoch, float)
-		self.byteacumullated:	acumullated bytes at this position (from newer items to older ones)
-
-
-	"""
-
-	def __init__(self, abspath):
-		self.abspath = abspath
-		self.filename, self.fileext = os.path.splitext (os.path.basename (self.abspath))
-		self.fileext = self.fileext.lower()
-		self.fileTepoch = os.path.getmtime (self.abspath)
-		# Fetch file long in bytes
-		self.filebytes = os.path.getsize(self.abspath)
-		logging.debug ('## item: '+ self.abspath)
-		logging.debug ('fileTepoch (from Stat): '.ljust( justif ) + str(self.fileTepoch))
-		# Fetch serie and serial number if any
-		self.__imageserie__(self.filename)
-		# Fetch image metadata (if any) 
-		self.__imagemetadata__()
-		# Decide creation time
-		self.__decidecreationtime__()
-		self.byteacumullated = 0
-
-	def __imageserie__(self, i):
-		""" Gets a serial number from the filename
-		Try to retrieve the date of creation from file name / path
-
-		"""
-		global assignfromfilename
-
-		self.imdateserial = False  # 
-		self.imserie = ''
-		self.imserial = ''
-		self.serialtype = 'filename'
-		self.fnDateTimeOriginal = None  # From start we asume that there is not a full date-time in file's name
-		sf = False  # serial number flag, True if some serial number if found
-		# Date
-		# We are going to collect information about dates of creation. from the less to the most.
-		# Try to find some date structure in folder paths. (abspath)
-		''' Fetch dates from folder structure, this prevents losing information if exif metadata 
-		doesn't exist. Metada can be lost if you modify files with software. It is also usefull 
-		if you move video files (wich doesn't have exif metadata) among cloud services. 
-		Pej. you can store a folder structure in your PC client dropbox, and you'll lose your "stat" date,
-		 but you can always recover it from file name/path.
-		Structures:
-			Years:
-				one of the path-folder starts as a year number with four numbers
-					[12]\d{3}    YYYY
-
-			Months:
-				one of the path folders is a month numbers
-
-			Combos:
-				one of the path folders starts with YYYY-MM
-
-			Full date:
-				there is a full-date structure on the path.
-				2015-01-04 | 2015_01_04 | 2015:01:04 | 2015 01 04
-
-			The day, hour-minutes and seconds asigned are 01, 12:00:00 + image serial number (in seconds) for each image to preserve an order.
-			'''
-		# Getting paths in a list to evaluate dates.
-		## Cutting main tree from fullpaths.
-		if self.abspath.startswith (originlocation):
-			branch = self.abspath[ len ( originlocation ):]
+		The day, hour-minutes and seconds asigned are 01, 12:00:00 + image serial number (in seconds) for each image to preserve an order.
+		'''
+	## Cutting main tree from fullpaths.
+	if abspath.startswith (originlocation):
+		branch = abspath[ len ( originlocation ):]
+	else:
+		branch = abspath[ len ( destination ):]
+	pathlevels = os.path.dirname (branch).split ('/')
+	# Removig not wanted slashes
+	if '' in pathlevels:
+		pathlevels.remove('')
+	logging.debug ('Found directories levels: '+str(pathlevels))
+	# Starting variables. From start, we assume that there is no date at all.
+	fnyear = None
+	fnmonth = None
+	fnday = '01'
+	fnhour = '12'
+	fnmin = '00'
+	fnsec = '00'
+	# C1 - /*Year*/ /month/ /day/ in pathlevels (year must be detected from an upper level first)
+	for word in pathlevels:
+		wordslash = "/"+word+"/"
+			#possible year is a level path:
+		expr = "/(?P<year>[12]\d{3})/"
+		mo = re.search(expr, wordslash)
+		try:
+			mo.group()
+		except:
+			pass
 		else:
-			branch = self.abspath[ len ( destination ):]
-		pathlevels = os.path.dirname (branch).split ('/')
-		# Removig not wanted slashes
-		if '' in pathlevels:
-			pathlevels.remove('')
-		logging.debug ('Found directories levels: '+str(pathlevels))
-		# Starting variables. From start, we assume that there is no date at all.
-		self.fnyear = None
-		self.fnmonth = None
-		self.fnday = '01'
-		self.fnhour = '12'
-		self.fnmin = '00'
-		self.fnsec = '00'
-		mintepoch = 1900
-		# C1 - /*Year*/ /month/ /day/ in pathlevels (year must be detected from an upper level first)
-		for word in pathlevels:
-				#possible year is a level path:
-			expr = "(?P<year>[12]\d{3})"
-			mo = re.search(expr, word)
-			try:
-				mo.group()
-			except:
-				pass
-			else:
-				if int(mo.group('year')) in range (mintepoch, 2038):
-					self.fnyear = mo.group ('year')
-					logging.debug( 'found possible year in'+'/'+word+'/'+':'+self.fnyear)
-					continue
+			if int(mo.group('year')) in range (mintepoch, 2038):
+				fnyear = mo.group ('year')
+				logging.debug( 'found possible year in '+ wordslash +':'+fnyear)
+				continue
 
-					#possible month is a level path:
-			if len (word) == 2 and word.isnumeric () and self.fnyear != None:
-				if int(word) in range(1,13):
-					self.fnmonth = word
-					logging.debug( 'found possible month in'+'/'+word+'/'+':'+self.fnmonth)
-					continue
+				#possible month is a level path:
+		if len (word) == 2 and word.isnumeric ():
+			if int(word) in range(1,13):
+				fnmonth = word
+				logging.debug( 'found possible month in'+ word +':'+fnmonth)
+				continue
 
-					#possible day is a level path:
-			if len (word) == 2 and word.isnumeric () and (self.fnyear != None and self.fnmonth != None):
-				if int(word) in range(1,32):
-					self.fnday = word
-					loggç.info( 'found possible day in'+'/'+word+'/'+':'+self.fnday)
-					continue
+				#possible day is a level path:
+		if len (word) == 2 and word.isnumeric ():
+			if int(word) in range(1,32):
+				fnday = word
+				logging.info( 'found possible day in'+ word +':'+fnday)
+				continue
 
 		# C2 (Year-month)
 		expr = ".*(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d).*"
-		mo = re.search(expr, self.abspath)
+		mo = re.search(expr, wordslash)
 		try:
 			mo.group()
 		except:
 			pass
 		else:
 			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (mintepoch, 2038):
-				self.fnyear = mo.group ('year')
-				self.fnmonth = mo.group ('month')
-				logging.debug( 'found possible year-month in'+self.abspath+':'+self.fnyear+" "+self.fnmonth)
-				if forceassignfromfilename == True:
-					assignfromfilename = True
+				fnyear = mo.group ('year')
+				fnmonth = mo.group ('month')
+				logging.debug( 'found possible year-month in'+ wordslash +':'+fnyear+" "+fnmonth)
 
 		# C3: (Year-month-day)
 		expr = "(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d)[-_ /]?(?P<day>[0-3]\d)"
-		mo = re.search(expr, self.abspath)
+		mo = re.search(expr, wordslash)
 		try:
 			mo.group()
 		except:
 			pass
 		else:
 			if int(mo.group('year')) in range (mintepoch, 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
-				self.fnyear = mo.group ('year')
-				self.fnmonth = mo.group ('month')
-				self.fnday = mo.group ('day')
-				logging.debug( 'found possible year-month-day in' + self.abspath + ':' + self.fnyear + " " + self.fnmonth + " " + self.fnday)
-				if forceassignfromfilename == True:
-					assignfromfilename = True
+				fnyear = mo.group ('year')
+				fnmonth = mo.group ('month')
+				fnday = mo.group ('day')
+				logging.debug( 'found possible year-month-day in' + wordslash + ':' + fnyear + " " + fnmonth + " " + fnday)
 
 
-		# C4: YYYYMMDD-HHMMSS  in filename
-		expr = '(?P<year>[12]\d{3})[-_ .]?(?P<month>[01]\d)[-_ .]?(?P<day>[0-3]\d)[-_ .]?(?P<hour>[012]\d)[-_ .]?(?P<min>[0-5]\d)[-_ .]?(?P<sec>[0-5]\d)'
-		mo = re.search (expr, i)
+	# C4: YYYYMMDD-HHMMSS  in filename
+	Imdatestart = False  # Flag to inform a starting full-date-identifier at the start of the file.
+	expr = '(?P<year>[12]\d{3})[-_ .:]?(?P<month>[01]\d)[-_ .:]?(?P<day>[0-3]\d)[-_ .:]?(?P<hour>[012]\d)[-_ .:]?(?P<min>[0-5]\d)[-_ .:]?(?P<sec>[0-5]\d)'
+	mo = re.search (expr, filename)
+	try:
+		mo.group()
+	except:
+		logging.debug ("expression %s Not found in %s" %(expr, filename))
+		pass
+	else:			
+		if int(mo.group('year')) in range (mintepoch, 2038):
+			fnyear  = mo.group ('year')
+			fnmonth = mo.group ('month')
+			fnday   = mo.group ('day')
+			fnhour  = mo.group ('hour')
+			fnmin   = mo.group ('min')
+			fnsec   = mo.group ('sec')
+			logging.debug ( 'found full date identifier in ' + filename)
+			if mo.start() == 0 :
+				logging.debug ('filename starts with a full date identifier: '+ filename )
+				Imdatestart = True  #  True means that filename starts with full-date serial in its name (item will not add any date in his filename again)
+
+
+	# setting creation date retrieved from filepath
+	if fnyear != None and fnmonth != None:
+		textdate = '%s:%s:%s %s:%s:%s'%(fnyear, fnmonth, fnday, fnhour, fnmin, fnsec)
+		logging.debug ('This date have been retrieved from the file-path-name: ' + textdate )
+		fnDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
+
+
+
+	# Serial number
+	seriallist = ['WA[-_ ]?[0-9]{4}',
+					'IMG[-_ ]?[0-9]{4}',
+					'PICT[-_ ]?[0-9]{4}',
+					'MVI[-_ ]?[0-9]{4}'
+					]
+	serialdict = { seriallist[0]: '(?P<se>WA)[-_ ]?(?P<sn>[0-9]{4})',
+					seriallist[1] : '(?P<se>IMG)[-_ ]?(?P<sn>[0-9]{4})',
+					seriallist[2] : '(?P<se>PICT)[-_ ]?(?P<sn>[0-9]{4})',
+					seriallist[3] : '(?P<se>MVI)[-_ ]?(?P<sn>[0-9]{4})'}
+	sf = False
+	for expr in seriallist :
+		mo = re.search (expr, filename)
 		try:
 			mo.group()
 		except:
-			logging.debug ("expression %s Not found in %s" %(expr, i))
-			pass
-		else:			
-			if int(mo.group('year')) in range (mintepoch, 2038):
-				self.fnyear  = mo.group ('year')
-				self.fnmonth = mo.group ('month')
-				self.fnday   = mo.group ('day')
-				self.fnhour  = mo.group ('hour')
-				self.fnmin   = mo.group ('min')
-				self.fnsec   = mo.group ('sec')
-				logging.debug ( 'found full date identifier in ' + i)
-				logging.debug ( i + " : " + " ".join( [mo.group('year'), mo.group('month'), mo.group('day'), mo.group('hour'), mo.group('min'), mo.group('sec') ]))
-				if forceassignfromfilename == True:
-					assignfromfilename = True
-				if mo.start() == 0 :
-					logging.debug ('filename starts with a full date identifier: '+ i )
-					self.imdateserial = True  #  True means that filename starts with full-date serial in its name (item will not add any date in his filename again)
-
-
-		# setting creation date
-		if self.fnyear != None and self.fnmonth != None:
-			textdate = '%s:%s:%s %s:%s:%s'%(self.fnyear, self.fnmonth, self.fnday, self.fnhour, self.fnmin, self.fnsec)
-			logging.debug ('This date have been retrieved from the file-path-name: ' + textdate )
-			self.fnDateTimeOriginal = textdate
-
-		# Serial number
-		seriallist = ['WA[-_ ]?[0-9]{4}',
-						'IMG[-_ ]?[0-9]{4}',
-						'PICT[-_ ]?[0-9]{4}',
-						'MVI[-_ ]?[0-9]{4}'
-						]
-		serialdict = { seriallist[0]: '(?P<se>WA)[-_ ]?(?P<sn>[0-9]{4})',
-						seriallist[1] : '(?P<se>IMG)[-_ ]?(?P<sn>[0-9]{4})',
-						seriallist[2] : '(?P<se>PICT)[-_ ]?(?P<sn>[0-9]{4})',
-						seriallist[3] : '(?P<se>MVI)[-_ ]?(?P<sn>[0-9]{4})'}
-		sf = False
-		for expr in seriallist :
-			mo = re.search (expr, i)
-			try:
-				mo.group()
-			except:
-				logging.debug ("expression %s Not found in %s" %(expr, i))
-				continue
-			else:
-				mo = re.search ( serialdict[expr], i)
-				logging.debug ("expression %s found in %s" %(expr, i))
-				sf = True
-				break
-
-		# setting serie and serial number
-		if sf == True:
-			self.imserie  = mo.group ('se')
-			self.imserial = mo.group ('sn')
+			logging.debug ("expression %s Not found in %s" %(expr, filename))
+			continue
 		else:
-			self.imserie  = '\tnoserial'
-			self.imserial = ''	
-		logging.debug ( 'Item serie and serial number (' + i + '): '+ self.imserie + ' ' +  self.imserial)
+			mo = re.search ( serialdict[expr], filename)
+			logging.debug ("expression %s found in %s" %(expr, filename))
+			sf = True
+			break
+	# setting serie and serial number
+	if sf == True:
+		imserie  = mo.group ('se')
+		imserial = mo.group ('sn')
+		logging.debug ( 'Item serie and serial number (' + filename + '): '+ imserie + ' ' +  imserial)
+	else:
+		imserie  = None
+		imserial = None	
+	
 
-	def __imagemetadata__(self):
-		self.DateTimeOriginal = None
-		if self.fileext not in ['.jpg', '.jpeg', '.raw', '.png']:
-			return
-		metadata = GExiv2.Metadata(self.abspath)
+	# Fetch image metadata (if any) 
+	textdate = None
+	MetaDateTimeOriginal = None
+	if fileext.lower() in ['.jpg', '.jpeg', '.raw', '.png']:
+		metadata = GExiv2.Metadata(abspath)
 		
-		self.ImageModel = self.__readmetadate__( metadata ,'Exif.Image.Model')
-		self.ImageMake = self.__readmetadate__( metadata ,'Exif.Image.Make')
-		self.DateTimeOriginal = self.__readmetadate__( metadata ,'Exif.Photo.DateTimeOriginal')
-		if self.DateTimeOriginal == None:
-			self.DateTimeOriginal = self.__readmetadate__( metadata ,'Exif.Photo.DateTimeDigitized')
-			if self.DateTimeOriginal == None:
-				self.DateTimeOriginal = self.__readmetadate__( metadata ,'Exif.Image.DateTime')
-				if self.DateTimeOriginal == None: return
+		ImageModel = readmetadate( metadata ,'Exif.Image.Model')
+		ImageMake = readmetadate( metadata ,'Exif.Image.Make')
+		textdate = readmetadate( metadata ,'Exif.Photo.DateTimeOriginal')
+		if textdate == None:
+			textdate = readmetadate( metadata ,'Exif.Photo.DateTimeDigitized')
+			if textdate == None:
+				textdate = readmetadate( metadata ,'Exif.Image.DateTime')
+		
+		if textdate != None: 
+			MetaDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
 
-		mo = re.search ( '(?P<year>[12]\d{3}):(?P<month>[01]\d):(?P<day>[0-3]\d) (?P<hour>[012]\d):(?P<min>[0-5]\d):(?P<sec>[0-5]\d)', self.DateTimeOriginal)
 
-		self.mtyear  = mo.group ('year')
-		self.mtmonth = mo.group ('month')
-		self.mtday   = mo.group ('day')
-		self.mthour  = mo.group ('hour')
-		self.mtmin   = mo.group ('min')
-		self.mtsec   = mo.group ('sec')
+	# Decide media date of creation
+	''' Decide and assign the right media cration time due to:
+	its metadata
+	<path/file name>
+	or from stat
+	'''
+	TimeOriginal = None  # From start we assign None if no matches are found.
+	Decideflag = None  # Flag storing the decision.
 
-	def __readmetadate__ (self, metadata, exif_key):
-		metadate = metadata.get(exif_key)
-		if metadate == None:
-			logging.debug ('No '+ exif_key + 'in item: '+ self.abspath)
-		else:
-			logging.debug (exif_key + ' found in: '+ self.abspath +' ('+metadate+')')
-			#print (exif_key, ':', metadate)
-		return metadate
+	# Set Creation Date from Metadata if it is found,
+	if MetaDateTimeOriginal != None and forceassignfromfilename == False:
+		TimeOriginal = MetaDateTimeOriginal
+		Decideflag = 'Metadata'
+		logging.debug ('Image Creation date has been set from image metadata: ' + str(TimeOriginal))
+	else:
+		# Set Creation Date extracted from filename/path
+		if fnDateTimeOriginal != None :
+			TimeOriginal = fnDateTimeOriginal
+			Decideflag = 'Filepath'
+			logging.debug ('Image Creation date has been set from File path / name: '+ str(TimeOriginal))
 
-	def __decidecreationtime__ (self):
-		''' Decide and assign the right media cration time due to:
-
-		its metadata
-		<path/file name>
-		from stat
-
-		'''
-		self.TimeOriginal = None # From start we assign None if no matches are found.
-
-		# Set Creation Date from Metadata if it is found,
-		if self.DateTimeOriginal != None:
-			if assignfromfilename == True:
-				logging.info ("Timestamp metadata was found, but I'll try to assign this date from the filename (forceassignfromfilename = True)")
-			else:
-				self.TimeOriginal = time.strptime (self.DateTimeOriginal, '%Y:%m:%d %H:%M:%S')
-				self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-				logging.debug ('Image Creation date has been set from image metadata: ' + str(time.asctime(self.TimeOriginal)))
-				return
-
-		if (self.fnDateTimeOriginal != None) or (self.abspath.find('DCIM') != -1):
-			# Set Creation Date extracted from filename/path
-			if self.fnDateTimeOriginal != None :
-				self.TimeOriginal = time.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
-				self.DateTimeOriginal = datetime.datetime.strptime (self.fnDateTimeOriginal, '%Y:%m:%d %H:%M:%S')
-				self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-				logging.debug ('Image Creation date has been set from File path / name: '+ str(time.asctime(self.TimeOriginal)))
-
-			elif self.abspath.find('DCIM') != -1:
-				# Set Creation Date from stat file.
+		elif abspath.find('DCIM') != -1:
+			# Set Creation Date from stat file.
+			'''
+			(You only should use this if you have those pictures in the original media storage
+			without modifications and you want to read it directly from the media. or
+			The files have been copied among filesystem that preserves the file creation date, usually ext3 ext4, NTFs, or MacOSx filesystems.
+			See file properties first and ensure that you can trust its date of creation. Anyway, the file only will be processed
+			if in its path is the word DCIM.)
 				'''
-				(You only should use this if you have those pictures in the original media storage
-				without modifications and you want to read it directly from the media. or
-				The files have been copied among filesystem that preserves the file creation date, usually ext3 ext4, NTFs, or MacOSx filesystems.
-				See file properties first and ensure that you can trust its date of creation. Anyway, the file only will be processed
-				if in its path is the word DCIM.)
-					'''
-				self.TimeOriginal = time.gmtime (self.fileTepoch)
-				self.TimeSinceEpoch = time.mktime (self.TimeOriginal)
-				print (datetime.datetime.utcfromtimestamp(self.fileTepoch))
-				#print (time.asctime(self.TimeOriginal))
-				self.DateTimeOriginal = datetime.datetime.utcfromtimestamp(self.fileTepoch)
-				logging.debug ( "Image Creation date has been set from File stat" )
+			TimeOriginal = Statdate
+			Decideflag = 'Stat'
+			logging.debug ( "Image Creation date has been set from File stat" )
 
-			# Convert to JPG
-			if convert == True and self.fileext.lower() not in [".jpg", ".jpeg"] and self.fileext.lower() in [".png",".bmp",]:
-				logging.info (self.abspath + ": se va a convertir a JPG")
-				print ("Converting to JPG: ", self.abspath)
-				imagen = Image.open (self.abspath)
-				imagenewpath = os.path.splitext(self.abspath)[0]+".jpg"
-				if args.dummy != True:
-					imagen.save (imagenewpath)
-				#imagen.close()  # commented for ubuntu 14.10 comtabilitiy
-				logging.debug ("file was saved as .jpg")
-				if args.dummy != True:
-					os.remove (self.abspath)
-				logging.debug (self.fileext + "image was deleted.")
-				self.abspath = imagenewpath
-				self.fileext = os.path.splitext(self.abspath)[1]
-				print ("Converted: ", self.abspath)
-
-			# Write metadata into the file-archive
-			if storefilemetadata == True and self.fileext.lower()[1:] not in moviesmedia:
-				if args.dummy != True:
-					metadata = GExiv2.Metadata(self.abspath)
-					metadata.set_date_time(self.DateTimeOriginal)
-					metadata.save_file()
-				logging.debug("writed metadata to image file.", )
-
-		if self.TimeOriginal == None :
-			self.TimeSinceEpoch = None
-			logging.debug ( "Can't guess Image date of Creation" )
+	if TimeOriginal == None :
+		logging.debug ( "Can't guess Image date of Creation" )
 
 
-def mediascan(location, filteryears=''):
+	con.execute ('INSERT INTO files (Fullfilepath, Filename, Fileext, Filebytes, Imdatestart,Pathdate, Exifdate, Statdate , Timeoriginal , Decideflag, Imgserie, Imgserial) \
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [ item, filename, fileext, filebytes, Imdatestart,fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, Decideflag, imserie, imserial ])
+
+def mediascan(location):
+	
 	# 1.1) get items dir-tree
 	listree = lsdirectorytree (location)
 
 	# 1.2) get a list of media items and casting into a class
-	itemlist = list()
 
 	for d in listree:
-		add = list ()
 		for ext in wantedmedia:
-			add += glob(os.path.join(d,'*.'+ ext.lower()))
-			add += glob(os.path.join(d,'*.'+ ext.upper()))
-		itemlist += add
-
-
-	if len (itemlist) == 0:
-		logging.warning ('Thereis nothing to import at ' + location)
-		return '',''
-
-	# casting items classes into a list.
-	itemsclasslist = list()
-	rangeyears = set()
-	for i in itemlist:
-		if ignoreTrash == True : 
-			if i.find ('.Trash') != -1 :
-				logging.debug ('Item %s was not included (Trash folder)' %(i) )
-				continue
-			if i.find ('.thumbnails') != -1 :
-				logging.debug ('Item %s was not included (Thumbnails folder)' %(i) )
-				continue
-		'''
-		if preservealbums == True :
-			if i.find ('_/') != -1 :
-				logging.debug ('Item %s was not included (Preserving album folder)' %(i) )
-				continue
-		'''
-		if filterboost == True :
-			include = False	
-			if len (filteryears) > 0 :
-				for a in filteryears:
-					if "/"+a+"/" in i:
-						include = True
-				if include == False:
-					logging.debug ('Item %s was not included. Out of filter-year range ' %(i) )
-					continue
-		item = mediafile(i)
-		itemsclasslist.append (item)
-		if item.TimeOriginal != None:
-			rangeyears.add (time.strftime('%Y', item.TimeOriginal))
-	return itemsclasslist, rangeyears
+			itemlist = list()
+			itemlist += glob(os.path.join(d,'*.'+ ext.lower()))
+			itemlist += glob(os.path.join(d,'*.'+ ext.upper()))
+			if len (itemlist) > 0:
+				for a in itemlist:
+					if ignoreTrash == True : 
+						if a.find ('.Trash') != -1 :
+							logging.debug ('Item %s was not included (Trash folder)' %(a) )
+							continue
+						if a.find ('.thumbnails') != -1 :
+							logging.debug ('Item %s was not included (Thumbnails folder)' %(a) )
+							continue
+					mediaadd (a)  # Add item info to DB
+	return
 
 # ===========================================
 # ========= Main module =====================
 # ===========================================
 
-assignfromfilename = False
+
+# 0) Start tmp Database
+
+if itemcheck (dbpath) == "file":
+	os.remove (dbpath)
+	logging.info("Older tmp database found, it has been deleted.")
+
+con = sqlite3.connect (dbpath) # it creates one if it doesn't exists
+cursor = con.cursor() # object to manage queries
+
+# Setup DB
+cursor.execute ('CREATE TABLE files (\
+	Scanpath char ,\
+	Fullfilepath char NOT NULL ,\
+	Filename char NOT NULL ,\
+	Fileext char  ,\
+	Targetfilepath char  ,\
+	Filebytes int NOT NULL ,\
+	Imdatestart Boolean, \
+	Exifdate date  ,\
+	Pathdate date  ,\
+	Statdate date NOT NULL,\
+	Timeoriginal date, \
+	Decideflag char, \
+	Imgserie char, \
+	Imgserial char \
+	)')
+con.commit()
 
 # 1) Get items
 # 1.1) Retrieving items to process
 
-originyears = ""
-itemscl = ''
-if originlocation != '' :
-	itemscl, originyears = mediascan (originlocation)
-	if itemscl == '':
-		print ('Nothing to scan at origin location (', originlocation)
-		logging.info ('Thereis nothing to import at origin location: ' + originlocation)
-		logging.warning ('Deactivating filterboost')
-		originyears = ''
-		filterboost = False
-	else:
-		# Inform the byte acumullated at intemscle
-		# self.byteacumullated
-		pass
+if not (originlocation == '' or originlocation == destination):
+	mediascan (originlocation)
+	con.commit()
+
+mediascan (destination)
+con.commit()
 
 
-itemscle = ''
-if considerdestinationitems == True:
-	itemscle, destinationyears = mediascan (destination, originyears)
-	if itemscle == '':
-		print ('Nothing to scan at destination location (', destination, ')')
-		logging.warning ('Thereis nothing to import at destination location: ' + destination)
+# Outputt messagges:
+Totalfiles = 0
+# Number of files at originlocation
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Fullfilepath LIKE '%s'" %(originlocation+"%"))
+nfilesscanned = ((cursor.fetchone())[0])
+Totalfiles += nfilesscanned
+msg = str(nfilesscanned) + ' files where scanned at originlocation'
+print (msg); logging.info (msg)
 
-if len (itemscl) + len (itemscle) == 0:
+# Number of files at destlocation
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Fullfilepath LIKE '%s'" %(destination+"%"))
+nfilesscanned = ((cursor.fetchone())[0])
+Totalfiles += nfilesscanned
+msg = str(nfilesscanned) + ' files where scanned at destination location'
+print (msg); logging.info (msg)
+
+msg = '-'*20+'\n'+ str(Totalfiles) + ' Total files scanned'
+print (msg); logging.info (msg)
+if Totalfiles == 0 :
 	print ('Nothing to import / reagroup.')
 	logging.warning ('Thereis nothing to import or reagroup, exitting....')
 	exit()
 
+# Number of files with date of creation on metadata.
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Metadata'")
+nfiles = ((cursor.fetchone())[0])
+msg = str(nfiles) + ' files already had metadata and will preserve it.'
+print (msg); logging.info (msg)
 
-logging.info ('%s new files scanned.' %(len (itemscl)))
-logging.info ('%s existent files scanned.' %(len (itemscle)))
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is NULL")
+nfiles = ((cursor.fetchone())[0])
+msg = str(nfiles) + ' files have not date metadata and a date have been retrieved from the filename or the path.'
+print (msg); logging.info (msg)
+
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is not NULL")
+nfiles = ((cursor.fetchone())[0])
+msg = str(nfiles) + ' files have a date metadata but a date have been retrieved from the filename or the path and it will rewritted (-faff option has been activated).'
+print (msg); logging.info (msg)
+
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Stat'")
+nfiles = ((cursor.fetchone())[0])
+msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames, and their date of creation will be assigned from the file creation date (Stat).'
+print (msg); logging.info (msg)
+
+cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag is NULL ")
+nfiles = ((cursor.fetchone())[0])
+msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place this files on a subfolder called DCIM if you want to assign the filesystem date of creation.'
+print (msg); logging.info (msg)
+
+
+exit()
+
+
 
 
 # 1.2) Processing items 
