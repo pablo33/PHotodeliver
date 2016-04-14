@@ -10,7 +10,9 @@ from glob import glob
 from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
 from PIL import Image
 import argparse  # for command line arguments
-import sqlite3
+import sqlite3; 
+os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
+
 
 # Internal variables.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
@@ -738,7 +740,7 @@ if itemcheck (dbpath) == "file":
 con = sqlite3.connect (dbpath) # it creates one if it doesn't exists
 cursor = con.cursor() # object to manage queries
 
-# Setup DB
+# 0.1) Setup DB
 cursor.execute ('CREATE TABLE files (\
 	Scanpath char ,\
 	Fullfilepath char NOT NULL ,\
@@ -753,7 +755,8 @@ cursor.execute ('CREATE TABLE files (\
 	Timeoriginal date, \
 	Decideflag char, \
 	Imgserie char, \
-	Imgserial char \
+	Imgserial char, \
+	Event char \
 	)')
 con.commit()
 
@@ -768,7 +771,6 @@ mediascan (destination)
 con.commit()
 
 
-# Outputt messagges:
 Totalfiles = 0
 # Number of files at originlocation
 cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Fullfilepath LIKE '%s'" %(originlocation+"%"))
@@ -788,10 +790,11 @@ msg = '-'*20+'\n'+ str(Totalfiles) + ' Total files scanned'
 print (msg); logging.info (msg)
 if Totalfiles == 0 :
 	print ('Nothing to import / reagroup.')
-	logging.warning ('Thereis nothing to import or reagroup, exitting....')
+	logging.warning ('Thereis nothing to import or reagroup, please revise your configuration, exitting....')
 	exit()
 
-# Number of files with date of creation on metadata.
+
+# 1.2) Show general info
 cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Metadata'")
 nfiles = ((cursor.fetchone())[0])
 msg = str(nfiles) + ' files already had metadata and will preserve it.'
@@ -814,61 +817,52 @@ print (msg); logging.info (msg)
 
 cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag is NULL ")
 nfiles = ((cursor.fetchone())[0])
-msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place this files on a subfolder called DCIM if you want to assign the filesystem date of creation.'
+msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date of creation.'
 print (msg); logging.info (msg)
+
+
+
+
+# 2) Processing items 
+# 2.1) Grouping in events, máx distance is gap seconds
+
+if gap >= 1:
+	if considerdestinationitems == True:
+		#considering all items
+		cursor.execute ('SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL ORDER BY Timeoriginal')
+	else:
+		#considering only items at origin folder
+		cursor.execute ("SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL and Fullfilepath LIKE '%s'  ORDER BY Timeoriginal" %(originlocation+"%"))
+
+
+	event = False
+	evnumber = 0
+	timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
+	print (timegap)
+
+	for i in cursor:
+		evnumber += 1
+		Fullfilepath1, Timestr = i
+		TimeOriginal1 = datetime.datetime.strptime (Timestr, '%Y-%m-%d %H:%M:%S')
+		if evnumber == 1 :
+			TimeOriginal0 = TimeOriginal1
+			Fullfilepath0 = Fullfilepath1
+			continue
+		diff = TimeOriginal1-TimeOriginal0
+		if diff <= timegap :
+			logging.debug ('this picture is part of an event with the preceding one')
+			con.execute ("UPDATE files set Event='EVENT' where Fullfilepath = '%s' " %(Fullfilepath0))
+			con.execute ("UPDATE files set Event='EVENT' where Fullfilepath = '%s' " %(Fullfilepath1))		
+		else:
+			logging.debug ('this picture is not part of an event with the preceding one')
+		#rolling one position to compare
+		TimeOriginal0 = TimeOriginal1
+		Fullfilepath0 = Fullfilepath1
+	con.commit()
 
 
 exit()
 
-
-
-
-# 1.2) Processing items 
-# ordering list items into a new list.
-AllCreationtimes = list()
-if itemscl != '' and  itemscle != '':
-	Allitemscl = itemscl + itemscle
-elif itemscl != '' :
-	Allitemscl = itemscl
-else:
-	Allitemscl = itemscle
-
-#print ('len Allitemscl', len(Allitemscl))
-for i in Allitemscl:
-	#print ('Time Since Epoch:', i.TimeSinceEpoch)
-	if i.TimeSinceEpoch != None:
-		AllCreationtimes.append ( i.TimeSinceEpoch )
-
-# 2) Setting flags for each file.
-AllCreationtimes.sort()  # All TimeSinceEpoch times sorted
-itemdict = dict ()  # our dict for deliver paths. Corresponds TimeSinceEpoch <> earliest event
-itemsdayflag = dict ()  # our group counter, if true
-
-# groups shoots in "gaps" assigning the earliest day of the group.
-# this will assign for each Epochtime an Epochtime wich is the earliest groups of shoots!
-# float-event changes when next shoot is far away from our 'gap'.
-
-if len(AllCreationtimes)>0 :
-	# Initializing first element.
-	floatevent = AllCreationtimes [0]
-	itemdict[AllCreationtimes[0]] = floatevent
-	itemsdayflag [floatevent] = 1
-
-	ct = 0
-	for t in AllCreationtimes:
-		ct += 1 # counter to fetch next element.
-		if ct >= len (AllCreationtimes): # So we check the next element, we do not want to check out of the list range.
-			break
-
-		if AllCreationtimes [ct] - t > gap:
-			# new event
-			floatevent = AllCreationtimes [ct]
-		
-		itemdict[AllCreationtimes[ct]] = floatevent # we set an "floatevent" for every Epoch-item-Time
-
-		if itemsdayflag.get (floatevent) == None:
-			itemsdayflag [floatevent] = 0
-		itemsdayflag [floatevent] = itemsdayflag.get (floatevent) + 1
 
 
 #3) Deliver items
