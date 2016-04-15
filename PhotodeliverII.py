@@ -759,7 +759,8 @@ cursor.execute ('CREATE TABLE files (\
 	Decideflag char, \
 	Imgserie char, \
 	Imgserial char, \
-	Event char \
+	EventID int, \
+	Eventdate date \
 	)')
 con.commit()
 
@@ -838,35 +839,42 @@ if gap >= 1:
 		cursor.execute ("SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL and Fullfilepath LIKE '%s'  ORDER BY Timeoriginal" %(originlocation+"%"))
 
 
-	event = False
-	evnumber = 0
+	regcounter = 0
+	filescounter = 0
+	filesflag = 0
+	eventID = 0
 	timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
 	msg = "Group option is activated (-gap option). I will group Pictures closer than " + str(timegap) + " in an event day."
 	print (msg); logging.info (msg)
 
-
 	for i in cursor:
-		evnumber += 1
+		print (regcounter, i[1])
+		regcounter += 1
 		Fullfilepath1, Timestr = i
 		TimeOriginal1 = datetime.datetime.strptime (Timestr, '%Y-%m-%d %H:%M:%S')
-		if evnumber == 1 :
+		if regcounter == 1 :
 			TimeOriginal0 = TimeOriginal1
 			Fullfilepath0 = Fullfilepath1
+			con.execute ("UPDATE files set EventID=0 where Fullfilepath = '%s'" %(Fullfilepath1))
 			continue
 		diff = TimeOriginal1-TimeOriginal0
 		if diff <= timegap :
-			logging.debug ('this picture is part of an event with the preceding one')
-			con.execute ("UPDATE files set Event='EVENT' where Fullfilepath = '%s' " %(Fullfilepath0))
-			con.execute ("UPDATE files set Event='EVENT' where Fullfilepath = '%s' " %(Fullfilepath1))		
+			logging.debug  ('this picture is part of an event with the preceding one')
+			filescounter += 1
+			filesflag = 1
 		else:
 			logging.debug ('this picture is not part of an event with the preceding one')
-		#rolling one position to compare
+			eventID += 1
+			filescounter = 1
+			filesflag = 0
+		con.execute ("UPDATE files set EventID=%s where Fullfilepath = '%s'" %(eventID, Fullfilepath1))
 		TimeOriginal0 = TimeOriginal1
 		Fullfilepath0 = Fullfilepath1
 	con.commit()
 
-
 exit()
+
+
 
 
 
