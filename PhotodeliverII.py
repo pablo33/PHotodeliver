@@ -120,12 +120,14 @@ parser.add_argument("-faff", "--forceassignfromfilename", choices = [1,0], type 
                     help="Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).")
 parser.add_argument("-clean", "--cleaning", choices = [1,0], type = int,
                     help="Cleans empty folders (only folders that had contained photos)")
+'''
 parser.add_argument("-lmg", "--latestmediagap", type = int,
                     help="Seconds from now to consider that item is one of the lattest media. You can override interact with this media.")
 parser.add_argument("-nmlm", "--donotmovelastmedia", choices = [1,0], type = int,
                     help="True means that the new lattest media will not be moved from its place.")
 parser.add_argument("-fb", "--filterboost", choices = [1,0], type = int,
                     help="True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.")
+'''
 parser.add_argument("-sfm", "--storefilemetadata", choices = [1,0], type = int,
                     help="Store the guesed date in the filename as Exif data.")
 parser.add_argument("-conv", "--convert", choices = [1,0], type = int,
@@ -231,6 +233,7 @@ else:
 parametersdyct["cleaning"] = cleaning
 
 
+'''
 if args.latestmediagap == None:
 	latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now' to consider a media-file is one of the latest 
 else:
@@ -250,7 +253,7 @@ if args.filterboost == None:
 else:
 	filterboost = [False,True][args.filterboost]
 parametersdyct["filterboost"] = filterboost
-
+'''
 
 if args.storefilemetadata == None:
 	storefilemetadata = Photodelivercfg.storefilemetadata
@@ -372,7 +375,7 @@ if type (forceassignfromfilename) is not bool :
 if type (cleaning) is not bool :
 	errmsgs.append ('\ncleaning parameter can only be True or False:\n-clean\t' + str(cleaning))
 	logging.critical('cleaning parameter is not True nor False')
-
+'''
 #-lmg
 if type(latestmediagap) is not int :
 	errmsgs.append ('\nlatestmediagap parameter can only be an integer:\n-lmg\t' + str(latestmediagap))
@@ -387,7 +390,7 @@ if type (donotmovelastmedia) is not bool :
 if type (filterboost) is not bool :
 	errmsgs.append ('\nfilterboost parameter can only be True or False:\n-fb\t' + str(filterboost))
 	logging.critical('filterboost parameter is not True nor False')
-
+'''
 #-sfm
 if type (storefilemetadata) is not bool :
 	errmsgs.append ('\nstorefilemetadata parameter can only be True or False:\n-fb\t' + str(storefilemetadata))
@@ -838,7 +841,9 @@ if gap >= 1:
 	event = False
 	evnumber = 0
 	timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
-	print (timegap)
+	msg = "Group option is activated (-gap option). I will group Pictures closer than " + str(timegap) + " in an event day."
+	print (msg); logging.info (msg)
+
 
 	for i in cursor:
 		evnumber += 1
