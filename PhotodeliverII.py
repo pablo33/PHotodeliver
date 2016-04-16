@@ -745,7 +745,6 @@ cursor = con.cursor() # object to manage queries
 
 # 0.1) Setup DB
 cursor.execute ('CREATE TABLE files (\
-	Scanpath char ,\
 	Fullfilepath char NOT NULL ,\
 	Filename char NOT NULL ,\
 	Fileext char  ,\
@@ -848,7 +847,6 @@ if gap >= 1:
 	print (msg); logging.info (msg)
 
 	for i in cursor:
-		print (regcounter, i[1])
 		regcounter += 1
 		Fullfilepath1, Timestr = i
 		TimeOriginal1 = datetime.datetime.strptime (Timestr, '%Y-%m-%d %H:%M:%S')
@@ -868,34 +866,53 @@ if gap >= 1:
 			filescounter = 1
 			filesflag = 0
 		con.execute ("UPDATE files set EventID=%s where Fullfilepath = '%s'" %(eventID, Fullfilepath1))
+
 		TimeOriginal0 = TimeOriginal1
 		Fullfilepath0 = Fullfilepath1
+		print (regcounter, eventID, i[1])
 	con.commit()
 
-exit()
+	#2.2) Inform de date of the event. (The minimun date)
+	for i in range (0,eventID+1):
+		# count number of files in that event: 
+		cursor.execute ('SELECT count (Fullfilepath), MIN (Timeoriginal) FROM files where EventID = %s' %(i))
+		nfiles, eventdate = cursor.fetchone()
+		#print (i, nfiles, eventdate)
+		# Set event date if it has the minimun number required.
+		if nfiles >= eventminpictures:
+			print ('')
+			con.execute ("UPDATE files set Eventdate='%s' where EventID = %s" %(eventdate ,i))
+	con.commit()
 
 
-
-
-
-#3) Deliver items
-for i in Allitemscl:
-	event = False
+# 3) Deliver items
+cursor.execute ('SELECT Fullfilepath, Timeoriginal, Eventdate, Filename, Fileext, Imdatestart FROM files ORDER BY Timeoriginal')
+for i in cursor:
+	a, Timeoriginal, Eventdate, Filename, Fileext, Imdatestart = i
 	eventname = ''
-	a = i.abspath  # item's fullpath and filename
+	eventnameflag = False
 
+	# Skipping giving a new path to files into destination folder if moveexistentfiles is True
+	if a.startswith(destination) and moveexistentfiles == False:
+		logging.debug ('Item %s was not included (moveexistentfiles option is False)' %(a) )
+		continue
+
+	# item's fullpath and filename
 	if preservealbums == True and a.find ('_/') != -1 :
 		if a.startswith (destination) :
-			logging.debug ('Item %s was not included (Preserving album folder at destination location)' %(a) )
+			logging.debug ('Item %s was not included (Preserving album folder at destination location).' %(a) )
 			continue
 		else:
-			dest = os.path.join(destination, a[len(originlocation)+1:]) # Just to moving to destination preserving path
+			logging.debug ('Moving item %s to destination preserving its path (is part of an album).' %(a) )
+			dest = os.path.join(destination, a[len(originlocation)+1:])
 
 	else:
-		if i.TimeOriginal == None:
-			dest = os.path.join(destination, "nodate", os.path.basename(a))
+		if Timeoriginal == None:
+			logging.debug ('Moving item %s to nodate folder (it has no date).' %(a) )			
+			dest = os.path.join(destination, "nodate", a[len(originlocation)+1:])
 
 		else:
+			itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
 			# Check origin dir Structure for an already event name
 			expr = "/[12]\d{3}[-_ ]?[01]\d?(?P<XeventnameX>.*)/"
 			mo = re.search(expr, a)
@@ -904,7 +921,7 @@ for i in Allitemscl:
 			except:
 				pass
 			else:
-				event = True
+				eventnameflag = True
 				eventname = mo.group('XeventnameX')
 
 			expr = "/[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
@@ -914,47 +931,35 @@ for i in Allitemscl:
 			except:
 				pass
 			else:
-				event = True
+				eventnameflag = True
 				eventname = mo.group('XeventnameX')
 
 
 			# retrieve the name & set Even-Flag to True
-			if event == True:
+			if eventnameflag == True:
 				logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
 
 
 
-
 			# Getting a possible event day
-			itemcreation = i.TimeOriginal
-				# deliver
-			if event == True or (itemsdayflag [ itemdict[i.TimeSinceEpoch] ] >= eventminpictures ):
+			# deliver
+			if eventnameflag == True or Eventdate is not None:
 				#destination includes a day - event
-				dest = os.path.join(destination, str(itemcreation.tm_year), '-'.join([str(itemcreation.tm_year), to2(itemcreation.tm_mon), to2(itemcreation.tm_mday)]), os.path.basename(a))
-				event = True
+				if Eventdate == None:
+					Eventdate = itemcreation
+				else:
+					Eventdate = datetime.datetime.strptime (Eventdate, '%Y-%m-%d %H:%M:%S')
+				dest = os.path.join(destination, Eventdate.strftime('%Y'), Eventdate.strftime('%Y-%m-%d'), os.path.basename(a))
+				eventnameflag = True
 			else:
 				#destination only includes a month (go to a various month-box)
-				dest = os.path.join(destination,str(itemcreation.tm_year), '-'.join([str(itemcreation.tm_year), to2(itemcreation.tm_mon)]), os.path.basename(a))
-			# set date information in filename if it is a movie.
-			if ((renamemovies == True and i.fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and i.fileext.lower()[1:] in wantedmedia)) and i.imdateserial != True :
-				dest = os.path.join(os.path.dirname(dest), time.strftime('%Y%m%d_%H%M%S', itemcreation ) + "-" + os.path.basename(dest) )
-
-	# Reagroup existent items if necessary
-	finalcopymode = copymode
-	#if itemscle != '':
-	if i.abspath.startswith(destination):
-		# Existent items.
-		if moveexistentfiles == True:
-			finalcopymode = 'm'
-		else:
-			continue
+				dest = os.path.join(destination, itemcreation.strftime('%Y'), itemcreation.strftime('%Y-%m'), os.path.basename(a))
+			# set date information in filename.
+			if ((renamemovies == True and Fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and Fileext.lower()[1:] in wantedmedia)) and Imdatestart != True :
+				dest = os.path.join(os.path.dirname(dest), itemcreation.strftime('%Y%m%d_%H%M%S') + "-" + os.path.basename(dest) )
 	
-	elif donotmovelastmedia == True and ((time.time () - i.TimeSinceEpoch) < latestmediagap) : 
-		logging.debug ('Doing nothing with this file, is inthe gap of the latest files and donotmovelastmedia is set to True.' + a)
-		continue
-		
 	# 
-	if event == True:
+	if eventnameflag == True:
 		destcheck = os.path.dirname(dest)  # Check destination dir structure ../../aaaa/aaaa-mm-dd*
 		levents = glob(destcheck + '*')
 		if len (levents) != 0 :
@@ -964,50 +969,53 @@ for i in Allitemscl:
 			if eventname != '':
 				eventname = " "+ eventname
 			dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
+	con.execute ("UPDATE files set Targetfilepath = '%s' where Fullfilepath = '%s'" %(dest , a))
+con.commit()
+'''
+# Perform file operations
+if a == dest :
+	#print ('the file does not need to be moved:', a)
+	logging.warning('this file remains at the same location:'+dest)
+else:
+	if itemcheck (dest) != '':
+		#print ('destination for this item already exists', a)
+		logging.warning('destination item already exists:' + dest)
+		if i.filebytes == os.path.getsize(dest): #___bytes are equal ___:
+			finalcopymode = 'd'
+			#print ('Duplicated file has been deleted. (same name and size)', a)
+			logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
+			if args.dummy != True:
+				os.remove (a)
+		else:
+			dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
+			finalcopymode = 'm'
+	if finalcopymode != 'd' :
+		if itemcheck (os.path.dirname(dest)) == '':
+				if args.dummy != True:
+					os.makedirs (os.path.dirname(dest))
+		if finalcopymode == 'c':
+			if args.dummy != True:
+				shutil.copy (a, dest)
+			#print ('FILE COPIED:', a, dest)
+			logging.debug('file successfully copied: '+ dest)
+			continue
+		else:
+			if args.dummy != True:
+				shutil.move (a, dest)
+			#print ('FILE MOVED:', a, dest)
+			logging.debug('file successfully moved: '+ dest)
 
-	# Perform file operations
-	if a == dest :
-		#print ('the file does not need to be moved:', a)
-		logging.warning('this file remains at the same location:'+dest)
-	else:
-		if itemcheck (dest) != '':
-			#print ('destination for this item already exists', a)
-			logging.warning('destination item already exists:' + dest)
-			if i.filebytes == os.path.getsize(dest): #___bytes are equal ___:
-				finalcopymode = 'd'
-				#print ('Duplicated file has been deleted. (same name and size)', a)
-				logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
-				if args.dummy != True:
-					os.remove (a)
-			else:
-				dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
-				finalcopymode = 'm'
-		if finalcopymode != 'd' :
-			if itemcheck (os.path.dirname(dest)) == '':
-					if args.dummy != True:
-						os.makedirs (os.path.dirname(dest))
-			if finalcopymode == 'c':
-				if args.dummy != True:
-					shutil.copy (a, dest)
-				#print ('FILE COPIED:', a, dest)
-				logging.debug('file successfully copied: '+ dest)
-				continue
-			else:
-				if args.dummy != True:
-					shutil.move (a, dest)
-				#print ('FILE MOVED:', a, dest)
-				logging.debug('file successfully moved: '+ dest)
-
-		# Clening empty directories
-		if cleaning == True:
-			scandir = os.path.dirname (a)
-			contents = glob (os.path.join(scandir,'*'))
-			#print (contents)
-			if len (contents) == 0 and scandir != os.path.normpath(originlocation):
-				if args.dummy != True:
-					shutil.rmtree (scandir)
-				#print ('\n','deleting dir:', scandir,'\n')
-				logging.debug ('Directory %s has been deleted (was empty)'%(a,))
+	# Clening empty directories
+	if cleaning == True:
+		scandir = os.path.dirname (a)
+		contents = glob (os.path.join(scandir,'*'))
+		#print (contents)
+		if len (contents) == 0 and scandir != os.path.normpath(originlocation):
+			if args.dummy != True:
+				shutil.rmtree (scandir)
+			#print ('\n','deleting dir:', scandir,'\n')
+			logging.debug ('Directory %s has been deleted (was empty)'%(a,))
+'''
 #4) Done
 print ('Done!')
 ''' print a little resumen '''
