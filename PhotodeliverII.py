@@ -2,19 +2,20 @@
 
 ''' This script moves camera file-media to a folder on our hard disk.
 	it will group files in foldes due to its date of creation 
-	it also deltes duplicated files (same name and bytes)'''
+	it also manages duplicated files (same name and bytes)'''
+
 
 # Module import
 import sys, os, shutil, logging, datetime, time, re
 from glob import glob
-from gi.repository import GExiv2  # Dependencies: gir1.2-gexiv2   &   python-gobject
-from PIL import Image
+from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
+from PIL import Image  # for image conversion
 import argparse  # for command line arguments
-import sqlite3; 
-os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
+import sqlite3  # for sqlite3 Database
 
 
 # Internal variables.
+os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
 wantedmedia = ['jpg','jpeg','raw','png','bmp'] + moviesmedia
 justif = 20  #  number of characters to justify logging info.
@@ -120,14 +121,6 @@ parser.add_argument("-faff", "--forceassignfromfilename", choices = [1,0], type 
                     help="Force assign from a date found in filename (if there is some). (This allows to overwrite EXIF assignation if it is found).")
 parser.add_argument("-clean", "--cleaning", choices = [1,0], type = int,
                     help="Cleans empty folders (only folders that had contained photos)")
-'''
-parser.add_argument("-lmg", "--latestmediagap", type = int,
-                    help="Seconds from now to consider that item is one of the lattest media. You can override interact with this media.")
-parser.add_argument("-nmlm", "--donotmovelastmedia", choices = [1,0], type = int,
-                    help="True means that the new lattest media will not be moved from its place.")
-parser.add_argument("-fb", "--filterboost", choices = [1,0], type = int,
-                    help="True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.")
-'''
 parser.add_argument("-sfm", "--storefilemetadata", choices = [1,0], type = int,
                     help="Store the guesed date in the filename as Exif data.")
 parser.add_argument("-conv", "--convert", choices = [1,0], type = int,
@@ -141,119 +134,97 @@ parser.add_argument("-test", "--dummy", action="store_true",
 args = parser.parse_args()
 parametersdyct = {}
 
-# Getting variables.
+# Getting variables, override config file with args.
 if args.originlocation == None:
-	originlocation =  Photodelivercfg.originlocation  #  Place to store files once procesed
+	originlocation =  Photodelivercfg.originlocation
 else:
 	originlocation = args.originlocation
 parametersdyct["originlocation"] = originlocation
 
 
 if args.destination == None:
-	destination =  Photodelivercfg.destination  #  Place to store files once procesed
+	destination =  Photodelivercfg.destination
 else:
 	destination = args.destination
 parametersdyct["destination"] = destination
 
 
 if args.renamemovies == None:
-	renamemovies = Photodelivercfg.renamemovies  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
+	renamemovies = Photodelivercfg.renamemovies 
 else:
 	renamemovies = [False,True][args.renamemovies]
 parametersdyct["renamemovies"] = renamemovies
 
 
 if args.renamephotos == None:
-	renamephotos = Photodelivercfg.renamephotos  # This option adds a creation date in media file-names
+	renamephotos = Photodelivercfg.renamephotos
 else:
 	renamephotos = [False,True][args.renamephotos]
 parametersdyct["renamephotos"] = renamephotos
 
 
 if args.eventminpictures == None:
-	eventminpictures = Photodelivercfg.eventminpictures  # minimun number of pictures to assign a day-event
+	eventminpictures = Photodelivercfg.eventminpictures
 else:
 	eventminpictures = args.eventminpictures
 parametersdyct["eventminpictures"] = eventminpictures
 
 
 if args.gap == None:
-	gap = Photodelivercfg.gap  # number of seconds between shots to be considered both pictures to the same event.
+	gap = Photodelivercfg.gap
 else:
 	gap = args.gap
 parametersdyct["gap"] = gap
 
 
 if args.copymode == None:
-	copymode = Photodelivercfg.copymode  # 'c' for copy or 'm' to move new files
+	copymode = Photodelivercfg.copymode
 else:
 	copymode = args.copymode
 parametersdyct["copymode"] = copymode
 
 
 if args.considerdestinationitems == None:
-	considerdestinationitems = Photodelivercfg.considerdestinationitems  # Consider destination items in order to group media files in events.
+	considerdestinationitems = Photodelivercfg.considerdestinationitems
 else:
 	considerdestinationitems = [False,True][args.considerdestinationitems]
 parametersdyct["considerdestinationitems"] = considerdestinationitems
 
 
 if args.moveexistentfiles == None:
-	moveexistentfiles = Photodelivercfg.moveexistentfiles  # True for move/reagroup or False to keep existent files at its place (Do nothing).
+	moveexistentfiles = Photodelivercfg.moveexistentfiles
 else:
 	moveexistentfiles = [False,True][args.moveexistentfiles]
 parametersdyct["moveexistentfiles"] = moveexistentfiles
 
 
 if args.ignoreTrash == None:
-	ignoreTrash = Photodelivercfg.ignoreTrash  # Ignore paths starting with '.Trash'
+	ignoreTrash = Photodelivercfg.ignoreTrash
 else:
 	ignoreTrash = [False,True][args.ignoreTrash]
 parametersdyct["ignoreTrash"] = ignoreTrash
 
 
 if args.preservealbums == None:
-	preservealbums = Photodelivercfg.preservealbums  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
+	preservealbums = Photodelivercfg.preservealbums 
 else:
 	preservealbums = [False,True][args.preservealbums]
 parametersdyct["preservealbums"] = preservealbums
 
 
 if args.forceassignfromfilename == None:
-	forceassignfromfilename = Photodelivercfg.forceassignfromfilename  #  True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
+	forceassignfromfilename = Photodelivercfg.forceassignfromfilename
 else:
 	forceassignfromfilename = [False,True][args.forceassignfromfilename]
 parametersdyct["forceassignfromfilename"] = forceassignfromfilename
 
 
 if args.cleaning == None:
-	cleaning = Photodelivercfg.cleaning  # Cleans empty folders (only folders that had contained photos)
+	cleaning = Photodelivercfg.cleaning
 else:
 	cleaning = [False,True][args.cleaning]
 parametersdyct["cleaning"] = cleaning
 
-
-'''
-if args.latestmediagap == None:
-	latestmediagap = Photodelivercfg.latestmediagap  # Amount in seconds since 'now' to consider a media-file is one of the latest 
-else:
-	latestmediagap = args.latestmediagap
-parametersdyct["latestmediagap"] = latestmediagap
-
-
-if args.donotmovelastmedia  == None:
-	donotmovelastmedia = Photodelivercfg.donotmovelastmedia  # Flag to move or not move the latest media bunch.
-else:
-	donotmovelastmedia = [False,True][args.donotmovelastmedia]
-parametersdyct["donotmovelastmedia"] = donotmovelastmedia
-
-
-if args.filterboost == None:
-	filterboost = Photodelivercfg.filterboost
-else:
-	filterboost = [False,True][args.filterboost]
-parametersdyct["filterboost"] = filterboost
-'''
 
 if args.storefilemetadata == None:
 	storefilemetadata = Photodelivercfg.storefilemetadata
@@ -293,7 +264,7 @@ print ("logging to:", logging_file)
 
 # Starting log file
 logging.info("======================================================")
-logging.info("================ Starting a new sesion ===============")
+logging.info("================ Starting a new run===================")
 logging.info("======================================================")
 logging.info('From:' + originlocation)
 logging.info('  To:' + destination)
@@ -375,22 +346,7 @@ if type (forceassignfromfilename) is not bool :
 if type (cleaning) is not bool :
 	errmsgs.append ('\ncleaning parameter can only be True or False:\n-clean\t' + str(cleaning))
 	logging.critical('cleaning parameter is not True nor False')
-'''
-#-lmg
-if type(latestmediagap) is not int :
-	errmsgs.append ('\nlatestmediagap parameter can only be an integer:\n-lmg\t' + str(latestmediagap))
-	logging.critical('latestmediagap parameter is not an integer')
 
-#-nmlm
-if type (donotmovelastmedia) is not bool :
-	errmsgs.append ('\ndonotmovelastmedia parameter can only be True or False:\n-nmlm\t' + str(donotmovelastmedia))
-	logging.critical('donotmovelastmedia parameter is not True nor False')
-
-#-fb
-if type (filterboost) is not bool :
-	errmsgs.append ('\nfilterboost parameter can only be True or False:\n-fb\t' + str(filterboost))
-	logging.critical('filterboost parameter is not True nor False')
-'''
 #-sfm
 if type (storefilemetadata) is not bool :
 	errmsgs.append ('\nstorefilemetadata parameter can only be True or False:\n-fb\t' + str(storefilemetadata))
@@ -415,12 +371,14 @@ for a in parametersdyct:
 	logging.info (text)
 	if args.showconfig :
 		print (text+ "\n")
-if args.showconfig :
-	print ("exitting...")
-	exit()
 
 if args.dummy:
 	logging.info("-------------- Running in Dummy mode ------------")
+
+# exitting if show config was enabled.
+if args.showconfig :
+	print ("exitting...")
+	exit()
 
 def readmetadate (metadata, exif_key):
 	metadate = metadata.get(exif_key)
@@ -709,6 +667,7 @@ def mediascan(location):
 	
 	# 1.1) get items dir-tree
 	listree = lsdirectorytree (location)
+	nfilesscanned = 0
 
 	# 1.2) get a list of media items and casting into a class
 
@@ -727,7 +686,10 @@ def mediascan(location):
 							logging.debug ('Item %s was not included (Thumbnails folder)' %(a) )
 							continue
 					mediaadd (a)  # Add item info to DB
-	return
+					nfilesscanned += 1
+	msg = str(nfilesscanned) + ' files where scanned at ' + location
+	print (msg); logging.info (msg)
+	return nfilesscanned
 
 # ===========================================
 # ========= Main module =====================
@@ -766,28 +728,15 @@ con.commit()
 # 1) Get items
 # 1.1) Retrieving items to process
 
+Totalfiles = 0
 if not (originlocation == '' or originlocation == destination):
-	mediascan (originlocation)
+	nfilesscanned = mediascan (originlocation)
+	Totalfiles += nfilesscanned
 	con.commit()
 
-mediascan (destination)
+nfilesscanned = mediascan (destination)
+Totalfiles += nfilesscanned
 con.commit()
-
-
-Totalfiles = 0
-# Number of files at originlocation
-cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Fullfilepath LIKE '%s'" %(originlocation+"%"))
-nfilesscanned = ((cursor.fetchone())[0])
-Totalfiles += nfilesscanned
-msg = str(nfilesscanned) + ' files where scanned at originlocation'
-print (msg); logging.info (msg)
-
-# Number of files at destlocation
-cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Fullfilepath LIKE '%s'" %(destination+"%"))
-nfilesscanned = ((cursor.fetchone())[0])
-Totalfiles += nfilesscanned
-msg = str(nfilesscanned) + ' files where scanned at destination location'
-print (msg); logging.info (msg)
 
 msg = '-'*20+'\n'+ str(Totalfiles) + ' Total files scanned'
 print (msg); logging.info (msg)
@@ -829,14 +778,13 @@ print (msg); logging.info (msg)
 # 2) Processing items 
 # 2.1) Grouping in events, máx distance is gap seconds
 
-if gap >= 1:
+if gap > 0:
 	if considerdestinationitems == True:
 		#considering all items
 		cursor.execute ('SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL ORDER BY Timeoriginal')
 	else:
 		#considering only items at origin folder
 		cursor.execute ("SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL and Fullfilepath LIKE '%s'  ORDER BY Timeoriginal" %(originlocation+"%"))
-
 
 	regcounter = 0
 	filescounter = 0
@@ -1034,12 +982,14 @@ for i in cursor:
 				os.remove (dest)
 			logging.debug (fileext + "image was deleted.")
 			print ("...Converted.")
+			dest = imagenewpath
 
 	# Write metadata into the file-archive
 	if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and Decideflag in ['Filepath','Stat']:
 		if args.dummy != True:
 			metadata = GExiv2.Metadata(dest)
-			metadata.set_date_time(TimeOriginal)
+			itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+			metadata.set_date_time(itemcreation)
 			metadata.save_file()
 		logging.debug("writed metadata to image file.", )
 
