@@ -117,7 +117,7 @@ parser.add_argument("-it", "--ignoreTrash", choices = [1,0], type = int,
 parser.add_argument("-pa", "--preservealbums", choices = [1,0], type = int,
                     help="Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png ")
 parser.add_argument("-faff", "--forceassignfromfilename", choices = [1,0], type = int,
-                    help="Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).")
+                    help="Force assign from a date found in filename (if there is some). (This allows to overwrite EXIF assignation if it is found).")
 parser.add_argument("-clean", "--cleaning", choices = [1,0], type = int,
                     help="Cleans empty folders (only folders that had contained photos)")
 '''
@@ -820,7 +820,7 @@ print (msg); logging.info (msg)
 
 cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag is NULL ")
 nfiles = ((cursor.fetchone())[0])
-msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date of creation.'
+msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date as date of creation.'
 print (msg); logging.info (msg)
 
 
@@ -843,7 +843,7 @@ if gap >= 1:
 	filesflag = 0
 	eventID = 0
 	timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
-	msg = "Group option is activated (-gap option). I will group Pictures closer than " + str(timegap) + " in an event day."
+	msg = "Group option is activated (-gap option). This will group Pictures closer in time than " + str(timegap) + " in an event day."
 	print (msg); logging.info (msg)
 
 	for i in cursor:
@@ -869,7 +869,7 @@ if gap >= 1:
 
 		TimeOriginal0 = TimeOriginal1
 		Fullfilepath0 = Fullfilepath1
-		print (regcounter, eventID, i[1])
+		# print (regcounter, eventID, i[1])
 	con.commit()
 
 	#2.2) Inform de date of the event. (The minimun date)
@@ -885,7 +885,7 @@ if gap >= 1:
 	con.commit()
 
 
-# 3) Deliver items
+# 3) Set Target files for items
 cursor.execute ('SELECT Fullfilepath, Timeoriginal, Eventdate, Filename, Fileext, Imdatestart FROM files ORDER BY Timeoriginal')
 for i in cursor:
 	a, Timeoriginal, Eventdate, Filename, Fileext, Imdatestart = i
@@ -909,12 +909,22 @@ for i in cursor:
 	else:
 		if Timeoriginal == None:
 			logging.debug ('Moving item %s to nodate folder (it has no date).' %(a) )			
-			dest = os.path.join(destination, "nodate", a[len(originlocation)+1:])
+			if a.startswith(os.path.join(destination,"nodate")):
+				dest = a
+			else:
+				if a.startswith(destination):
+					dest = os.path.join(destination, "nodate", a[len(destination)+1:])
+				else:
+					dest = os.path.join(destination, "nodate", a[len(originlocation)+1:])
+				print (dest)
+				print ("here!")
 
 		else:
 			itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
 			# Check origin dir Structure for an already event name
-			expr = "/[12]\d{3}[-_ ]?[01]\d?(?P<XeventnameX>.*)/"
+			'''
+			#  /YYYY-MM Xeventname/
+			expr = "/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/"
 			mo = re.search(expr, a)
 			try:
 				mo.group()
@@ -923,7 +933,8 @@ for i in cursor:
 			else:
 				eventnameflag = True
 				eventname = mo.group('XeventnameX')
-
+			'''
+			#  /YYYY-MM-DD Xeventname/
 			expr = "/[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
 			mo = re.search(expr, a)
 			try:
@@ -971,39 +982,67 @@ for i in cursor:
 			dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
 	con.execute ("UPDATE files set Targetfilepath = '%s' where Fullfilepath = '%s'" %(dest , a))
 con.commit()
-'''
-# Perform file operations
-if a == dest :
-	#print ('the file does not need to be moved:', a)
-	logging.warning('this file remains at the same location:'+dest)
-else:
+
+
+# 4) Perform file operations
+cursor.execute ('SELECT Fullfilepath, Targetfilepath, Filebytes, Fileext, Timeoriginal, Decideflag FROM files WHERE Targetfilepath <> Fullfilepath and Targetfilepath IS NOT NULL')
+for i in cursor:
+	a, dest, filebytes, fileext, TimeOriginal, Decideflag= i
 	if itemcheck (dest) != '':
 		#print ('destination for this item already exists', a)
 		logging.warning('destination item already exists:' + dest)
-		if i.filebytes == os.path.getsize(dest): #___bytes are equal ___:
-			finalcopymode = 'd'
+		if filebytes == os.path.getsize(dest):  #___bytes are equal ___:
 			#print ('Duplicated file has been deleted. (same name and size)', a)
-			logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
-			if args.dummy != True:
-				os.remove (a)
-		else:
-			dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
-			finalcopymode = 'm'
-	if finalcopymode != 'd' :
-		if itemcheck (os.path.dirname(dest)) == '':
+			if copymode == 'm':
+				logging.warning ('Duplicated file has been deleted. (same name and size):' + a )
 				if args.dummy != True:
-					os.makedirs (os.path.dirname(dest))
-		if finalcopymode == 'c':
+					os.remove (a)
+				continue
+			else:
+				dest = os.path.join (originlocation,'Duplicates', dest [len(originlocation)+2:])
+				finalcopymode = 'm'
+	if itemcheck (os.path.dirname(dest)) == '':
 			if args.dummy != True:
-				shutil.copy (a, dest)
-			#print ('FILE COPIED:', a, dest)
-			logging.debug('file successfully copied: '+ dest)
-			continue
+				os.makedirs (os.path.dirname(dest))
+	if copymode == 'c':
+		if args.dummy != True:
+			shutil.copy (a, dest)
+		#print ('FILE COPIED:', a, dest)
+		logging.debug('file successfully copied: '+ dest)
+		continue
+	else:
+		if args.dummy != True:
+			shutil.move (a, dest)
+		#print ('FILE MOVED:', a, dest)
+		logging.debug('file successfully moved: '+ dest)
+
+	# Convert to JPG Option
+	if convert == True and fileext.lower() not in [".jpg", ".jpeg"] and fileext.lower() in [".png",".bmp",]:
+		imagenewpath = os.path.splitext(dest)[0]+".jpg"
+		if itemcheck (imagenewpath) != '':
+			logging.info('destination item already exists:' + imagenewpath + ". Can't convert this file at destination")
 		else:
+			logging.info (dest + ": ... Converting to .jpg")
+			print (dest)
+			print ("...Converting to .jpg")
+			imagen = Image.open (dest)
 			if args.dummy != True:
-				shutil.move (a, dest)
-			#print ('FILE MOVED:', a, dest)
-			logging.debug('file successfully moved: '+ dest)
+				imagen.save (imagenewpath)
+			#imagen.close()  # commented for ubuntu 14.10 comtabilitiy
+			logging.debug ("file was converted and saved as .jpg")
+			if args.dummy != True:
+				os.remove (dest)
+			logging.debug (fileext + "image was deleted.")
+			print ("...Converted.")
+
+	# Write metadata into the file-archive
+	if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and Decideflag in ['Filepath','Stat']:
+		if args.dummy != True:
+			metadata = GExiv2.Metadata(dest)
+			metadata.set_date_time(TimeOriginal)
+			metadata.save_file()
+		logging.debug("writed metadata to image file.", )
+
 
 	# Clening empty directories
 	if cleaning == True:
@@ -1015,7 +1054,6 @@ else:
 				shutil.rmtree (scandir)
 			#print ('\n','deleting dir:', scandir,'\n')
 			logging.debug ('Directory %s has been deleted (was empty)'%(a,))
-'''
 #4) Done
 print ('Done!')
 ''' print a little resumen '''
