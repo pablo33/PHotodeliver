@@ -17,7 +17,8 @@ import sqlite3  # for sqlite3 Database
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
-wantedmedia = ['jpg','jpeg','raw','png','bmp'] + moviesmedia
+photomedia = ['jpg','jpeg','raw','png','bmp']
+wantedmedia =  photomedia + moviesmedia
 justif = 20  #  number of characters to justify logging info.
 
 
@@ -787,8 +788,6 @@ if gap > 0:
 		cursor.execute ("SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL and Fullfilepath LIKE '%s'  ORDER BY Timeoriginal" %(originlocation+"%"))
 
 	regcounter = 0
-	filescounter = 0
-	filesflag = 0
 	eventID = 0
 	timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
 	msg = "Group option is activated (-gap option). This will group Pictures closer in time than " + str(timegap) + " in an event day."
@@ -806,13 +805,9 @@ if gap > 0:
 		diff = TimeOriginal1-TimeOriginal0
 		if diff <= timegap :
 			logging.debug  ('this picture is part of an event with the preceding one')
-			filescounter += 1
-			filesflag = 1
 		else:
 			logging.debug ('this picture is not part of an event with the preceding one')
 			eventID += 1
-			filescounter = 1
-			filesflag = 0
 		con.execute ("UPDATE files set EventID=%s where Fullfilepath = '%s'" %(eventID, Fullfilepath1))
 
 		TimeOriginal0 = TimeOriginal1
@@ -840,19 +835,19 @@ for i in cursor:
 	eventname = ''
 	eventnameflag = False
 
-	# Skipping giving a new path to files into destination folder if moveexistentfiles is True
+	# 3.1) Skipping processing a new path to files into destination folder if moveexistentfiles is False
 	if a.startswith(destination) and moveexistentfiles == False:
 		logging.debug ('Item %s was not included (moveexistentfiles option is False)' %(a) )
 		continue
 
-	# item's fullpath and filename
+	# 3.2) item's fullpath and filename
 	if preservealbums == True and a.find ('_/') != -1 :
 		if a.startswith (destination) :
 			logging.debug ('Item %s was not included (Preserving album folder at destination location).' %(a) )
-			continue
 		else:
 			logging.debug ('Moving item %s to destination preserving its path (is part of an album).' %(a) )
 			dest = os.path.join(destination, a[len(originlocation)+1:])
+		continue
 
 	else:
 		if Timeoriginal == None:
@@ -864,8 +859,6 @@ for i in cursor:
 					dest = os.path.join(destination, "nodate", a[len(destination)+1:])
 				else:
 					dest = os.path.join(destination, "nodate", a[len(originlocation)+1:])
-				print (dest)
-				print ("here!")
 
 		else:
 			itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
@@ -914,10 +907,10 @@ for i in cursor:
 				#destination only includes a month (go to a various month-box)
 				dest = os.path.join(destination, itemcreation.strftime('%Y'), itemcreation.strftime('%Y-%m'), os.path.basename(a))
 			# set date information in filename.
-			if ((renamemovies == True and Fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and Fileext.lower()[1:] in wantedmedia)) and Imdatestart != True :
+			if ((renamemovies == True and Fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and Fileext.lower()[1:] in photomedia)) and Imdatestart != True :
 				dest = os.path.join(os.path.dirname(dest), itemcreation.strftime('%Y%m%d_%H%M%S') + "-" + os.path.basename(dest) )
 	
-	# 
+	# 3.3) Adding event name in the path
 	if eventnameflag == True:
 		destcheck = os.path.dirname(dest)  # Check destination dir structure ../../aaaa/aaaa-mm-dd*
 		levents = glob(destcheck + '*')
