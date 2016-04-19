@@ -78,9 +78,6 @@ ignoreTrash = True  # True / False .... Ignore paths starting with '.Trash'
 preservealbums = True  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
 forceassignfromfilename = True  # True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
 cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
-latestmediagap = 6*30*24*60*60  # Seconds from 'now' to consider that item is one of the lattest media. You can override interact with this media.
-donotmovelastmedia = True  # True / False ..... True means that the new lattest media will not be moved from its place.
-filterboost = True  # True / False .......  True means that only consider destination folders that contains in its paths one of the years that have been retrieved from origin files. So it boost destination media scanning by filtering it.
 storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
 convert = True  # True / False ......  Try to convert image formats in JPG
 '''%{'home':os.getenv('HOME')}
@@ -950,7 +947,6 @@ for i in cursor:
 			shutil.copy (a, dest)
 		#print ('FILE COPIED:', a, dest)
 		logging.debug('file successfully copied: '+ dest)
-		continue
 	else:
 		if args.dummy != True:
 			shutil.move (a, dest)
@@ -958,13 +954,12 @@ for i in cursor:
 		logging.debug('file successfully moved: '+ dest)
 
 	# Convert to JPG Option
-	if convert == True and fileext.lower() not in [".jpg", ".jpeg"] and fileext.lower() in [".png",".bmp",]:
+	if convert == True and fileext.lower() in [".png",".bmp",]:
 		imagenewpath = os.path.splitext(dest)[0]+".jpg"
 		if itemcheck (imagenewpath) != '':
 			logging.info('destination item already exists:' + imagenewpath + ". Can't convert this file at destination")
 		else:
 			logging.info (dest + ": ... Converting to .jpg")
-			print (dest)
 			print ("...Converting to .jpg")
 			imagen = Image.open (dest)
 			if args.dummy != True:
