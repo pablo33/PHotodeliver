@@ -43,6 +43,12 @@ def to2(month):
 		strmonth = "0" + str(month)
 	return strmonth
 
+
+def addslash (text):
+	if text [-1] != '/':
+		text += '/'
+	return text
+
 # Load user config:
 # Getting user folder to place log files....
 userpath = os.path.join(os.getenv('HOME'),".Photodeliver")
@@ -276,6 +282,7 @@ if originlocation != '':
 	if itemcheck(originlocation) != 'folder':
 		errmsgs.append ('\nSource folder does not exist:\n-ol\t'+originlocation)
 		logging.critical('Source folder does not exist: ' + originlocation)
+	originlocation = addslash (originlocation)
 
 else:
 	if moveexistentfiles == True :
@@ -289,6 +296,7 @@ else:
 if itemcheck(destlocation) != 'folder':
 	errmsgs.append ('\nDestination folder does not exist:\n-dl\t' + str(destlocation))
 	logging.critical('Source folder does not exist')
+destlocation = addslash (destlocation)
  
 #-rm
 if type (renamemovies) is not bool :
@@ -871,7 +879,7 @@ for i in cursor:
 			logging.debug ('Item %s was not included (Preserving album folder at destination location).' %(a) )
 		else:
 			logging.debug ('Moving item %s to destination preserving its path (is part of an album).' %(a) )
-			dest = os.path.join(destlocation, a[len(originlocation)+1:])
+			dest = os.path.join(destlocation, a.replace(originlocation,''))
 		continue
 
 	else:
@@ -881,9 +889,9 @@ for i in cursor:
 				dest = a
 			else:
 				if a.startswith(destlocation):
-					dest = os.path.join(destlocation, "nodate", a[len(destlocation)+1:])
+					dest = os.path.join(destlocation, "nodate", a.replace(destlocation,''))
 				else:
-					dest = os.path.join(destlocation, "nodate", a[len(originlocation)+1:])
+					dest = os.path.join(destlocation, "nodate", a.replace(originlocation,''))
 
 		else:
 			itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
@@ -910,7 +918,6 @@ for i in cursor:
 			else:
 				eventnameflag = True
 				eventname = mo.group('XeventnameX')
-
 
 			# retrieve the name & set Even-Flag to True
 			if eventnameflag == True:
@@ -961,12 +968,12 @@ for i in cursor:
 				dest = Nextfilenumber (dest)
 				continue
 			else:
-				if a.startswith (os.path.join(originlocation,dupfoldername)) or a.startswith (destlocation) :
+				if a.startswith (os.path.join(originlocation,dupfoldername)) or dest.startswith (os.path.join(originlocation,dupfoldername)) or a.startswith (destlocation) :
 					logging.warning('destination item already exists')
 					dest = a
 					break
 				else:
-					dest = os.path.join (originlocation,dupfoldername, dest [len(originlocation)+2:])
+					dest = os.path.join (originlocation,dupfoldername, a.replace(originlocation,''))
 					continue
 
 	con.execute ("UPDATE files set Targetfilepath = '%s', Convertfileflag = '%s' where Fullfilepath = '%s'" %(dest , convertfileflag, a))
@@ -987,10 +994,10 @@ for i in cursor:
 	# Convert to JPG Option
 	if convertfileflag == True:
 		logging.info ("\t Converting to .jpg")
-		imagen = Image.open (a)
+		picture = Image.open (a)
 		if args.dummy != True:
-			imagen.save (dest)
-		#imagen.close()  # commented for ubuntu 14.10 comtabilitiy
+			picture.save (dest)
+		picture.close()  # commented for ubuntu 14.10 comtabilitiy
 	else:
 		if args.dummy != True:
 			shutil.copy (a, dest)
