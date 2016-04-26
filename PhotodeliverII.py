@@ -4,14 +4,13 @@
 	it will group files in foldes due to its date of creation 
 	it also manages duplicated files (same name and bytes)'''
 
-
 # Module import
 import sys, os, shutil, logging, datetime, time, re
 from glob import glob
 from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
 from PIL import Image  # for image conversion
 import argparse  # for command line arguments
-import sqlite3  # for sqlite3 Database
+import sqlite3  # for sqlite3 Database management
 
 
 # Internal variables.
@@ -720,7 +719,7 @@ def mediascan(location):
 							continue
 					mediaadd (a)  # Add item info to DB
 					nfilesscanned += 1
-	msg = str(nfilesscanned) + ' files where scanned at ' + location
+	msg = str(nfilesscanned) + ' files where fetched at ' + location
 	print (msg); logging.info (msg)
 	return nfilesscanned
 
@@ -985,6 +984,7 @@ foldercollection = set ()
 cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath <> Fullfilepath and Targetfilepath IS NOT NULL')
 for i in cursor:
 	a, dest, fileext, TimeOriginal, decideflag, convertfileflag = i
+	convertfileflag = bool (convertfileflag)
 	logging.info ('')
 	logging.info ('Processing:')
 	logging.info (a)
@@ -997,7 +997,7 @@ for i in cursor:
 		picture = Image.open (a)
 		if args.dummy != True:
 			picture.save (dest)
-		picture.close()  # commented for ubuntu 14.10 comtabilitiy
+		#picture.close()  # commented for ubuntu 14.10 comtabilitiy
 	else:
 		if args.dummy != True:
 			shutil.copy (a, dest)
