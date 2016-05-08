@@ -981,9 +981,13 @@ con.commit()
 
 # 4) Perform file operations
 foldercollection = set ()
-cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath <> Fullfilepath and Targetfilepath IS NOT NULL')
+cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath IS NOT NULL')
+counter = 0
+
 for i in cursor:
-	a, dest, fileext, TimeOriginal, decideflag, convertfileflag = i
+	counter += 1
+	print ('\n\n',i,counter)
+	a, dest, fileext, Timeoriginal, decideflag, convertfileflag = i
 	convertfileflag = bool (convertfileflag)
 	logging.info ('')
 	logging.info ('Processing:')
@@ -1002,7 +1006,7 @@ for i in cursor:
 		if args.dummy != True:
 			shutil.copy (a, dest)
 		logging.info ('\t file successfully copied into destination.')
-	if copymode == 'm':
+	if copymode == 'm' and a != dest:
 		if args.dummy != True:
 			os.remove (a)
 		logging.info ('\t origin file successfully deleted.')
@@ -1014,6 +1018,7 @@ for i in cursor:
 		if args.dummy != True:
 			metadata = GExiv2.Metadata(dest)
 			itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+			print (type(itemcreation), itemcreation)
 			metadata.set_date_time(itemcreation)
 			metadata.save_file()
 		logging.info ('\t' + 'writed metadata to image file.')
