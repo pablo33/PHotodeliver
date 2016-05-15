@@ -474,7 +474,7 @@ def mediaadd(item):
 	fnDateTimeOriginal = None  # From start we assume a no date found on the file path
 
 	#2) Fetch date identificators form imagepath, serie and serial number if any. 
-	mintepoch = 1900  # In order to discard low year values, this is the lowest year. 
+	mintepoch = 1899  # In order to discard low year values, this is the lowest year. 
 
 	# Try to find some date structure in folder paths. (abspath)
 	''' Fetch dates from folder structure, this prevents losing information if exif metadata 
@@ -572,7 +572,23 @@ def mediaadd(item):
 				logging.debug( 'found possible year-month-day in' + wordslash + ':' + fnyear + " " + fnmonth + " " + fnday)
 
 
-	# C4: YYYYMMDD-HHMMSS  in filename
+	# C4: YYYY-MM-DD  in filename
+	expr = '(?P<year>[12]\d{3})[-_ .:]?(?P<month>[01]\d)[-_ .:]?(?P<day>[0-3]\d)'
+	mo = re.search (expr, filename)
+	try:
+		mo.group()
+	except:
+		logging.debug ("expression %s Not found in %s" %(expr, filename))
+		pass
+	else:			
+		if int(mo.group('year')) in range (mintepoch, 2038):
+			fnyear  = mo.group ('year')
+			fnmonth = mo.group ('month')
+			fnday   = mo.group ('day')
+			logging.debug ( 'found year,month and day identifier in filename')
+
+
+	# C5: YYYYMMDD-HHMMSS  in filename
 	Imdatestart = False  # Flag to inform a starting full-date-identifier at the start of the file.
 	expr = '(?P<year>[12]\d{3})[-_ .:]?(?P<month>[01]\d)[-_ .:]?(?P<day>[0-3]\d)[-_ .:]?(?P<hour>[012]\d)[-_ .:]?(?P<min>[0-5]\d)[-_ .:]?(?P<sec>[0-5]\d)'
 	mo = re.search (expr, filename)
@@ -787,7 +803,7 @@ print (msg); logging.info (msg)
 
 cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is NULL")
 nfiles = ((cursor.fetchone())[0])
-msg = str(nfiles) + ' files have not date metadata and a date have been retrieved from the filename or the path.'
+msg = str(nfiles) + ' files have not date metadata and a date have been retrieved from the filename or path.'
 print (msg); logging.info (msg)
 
 cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is not NULL")
@@ -983,7 +999,6 @@ con.commit()
 foldercollection = set ()
 cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath IS NOT NULL')
 for i in cursor:
-	print (i)
 	a, dest, fileext, Timeoriginal, decideflag, convertfileflag = i
 	convertfileflag = eval (convertfileflag)
 	logging.info ('')
@@ -1015,7 +1030,6 @@ for i in cursor:
 
 	if cleaning == True and copymode == 'm':
 		foldercollection.add (os.path.dirname(a))
-
 
 	# Write metadata into the file-archive
 	if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat']:
