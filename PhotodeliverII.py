@@ -954,9 +954,10 @@ for i in cursor:
 			dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
 	# 3.4) Set convert flag
 	convertfileflag = False
-	if convert == True and fileext.lower() in [".png",".bmp",]:
+	if convert == True and fileext.lower() in ['.png','.bmp',]:
 		dest = os.path.splitext(dest)[0]+".jpg"
 		convertfileflag = True
+		logging.info ('Convertfileflag =' + str(convertfileflag))
 	
 	# 3.5) Checkig if it is a duplicated file.
 	while True:
@@ -975,16 +976,16 @@ for i in cursor:
 					dest = os.path.join (originlocation,dupfoldername, a.replace(originlocation,''))
 					continue
 
-	con.execute ("UPDATE files set Targetfilepath = '%s', Convertfileflag = '%s' where Fullfilepath = '%s'" %(dest , convertfileflag, a))
+	con.execute ("UPDATE files set Targetfilepath = '%s', Convertfileflag = '%s' where Fullfilepath = '%s'" %(dest ,convertfileflag, a))
 con.commit()
-
 
 # 4) Perform file operations
 foldercollection = set ()
 cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath IS NOT NULL')
 for i in cursor:
+	print (i)
 	a, dest, fileext, Timeoriginal, decideflag, convertfileflag = i
-	convertfileflag = bool (convertfileflag)
+	convertfileflag = eval (convertfileflag)
 	logging.info ('')
 	logging.info ('Processing:')
 	logging.info (a)
@@ -998,17 +999,24 @@ for i in cursor:
 		if args.dummy != True:
 			picture.save (dest)
 		#picture.close()  # commented for ubuntu 14.10 comtabilitiy
-	else:
-		if args.dummy != True:
-			shutil.copy (a, dest)
-		logging.info ('\t file successfully copied into destination.')
-	if copymode == 'm' and a != dest:
-		if args.dummy != True:
-			os.remove (a)
-		logging.info ('\t origin file successfully deleted.')
-		if cleaning == True:
-			foldercollection.add (os.path.dirname(a))
-	
+		if copymode == 'm':
+			if args.dummy != True:
+				os.remove (a)
+			logging.info ('\t origin file successfully deleted after conversion.')
+	elif a != dest:
+		if copymode == 'm':
+			if args.dummy != True:
+				shutil.move (a, dest)
+			logging.info ('\t file successfully moved into destination.')
+		else:	
+			if args.dummy != True:
+				shutil.copy (a, dest)
+			logging.info ('\t file successfully copied into destination.')
+
+	if cleaning == True and copymode == 'm':
+		foldercollection.add (os.path.dirname(a))
+
+
 	# Write metadata into the file-archive
 	if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat']:
 		if args.dummy != True:
