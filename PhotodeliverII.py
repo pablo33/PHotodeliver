@@ -25,17 +25,40 @@ dupfoldername = 'duplicates'
 # =========  Utils ===============
 # ================================
 
-def itemcheck(a):
-	if os.path.isfile(a):
+# errors
+class OutOfRangeError(ValueError):
+	pass
+class NotIntegerError(ValueError):
+	pass
+class NotStringError(ValueError):
+	pass
+class MalformedPathError(ValueError):
+	pass
+
+
+
+def itemcheck(pointer):
+	''' returns what kind of a pointer is '''
+	if type(pointer) is not str:
+		raise NotStringError ('Bad input, it must be a string')
+	if pointer.find("//") != -1 :
+		raise MalformedPathError ('Malformed Path, it has double slashes')
+	
+	if os.path.isfile(pointer):
 		return 'file'
-	if os.path.isdir(a):
+	if os.path.isdir(pointer):
 		return 'folder'
-	if os.path.islink(a):
+	if os.path.islink(pointer):
 		return 'link'
 	return ""
 
 
 def to2(month):
+	''' Convert integers into a 2 digit  month string '''
+	if type(month) is not int:
+		raise NotIntegerError ('Only integers are addmited as input')
+	if not (0 < month < 13):
+		raise OutOfRangeError('Number out of range, must be a month')
 	if month > 9:
 		strmonth = str(month)
 	else:
@@ -44,11 +67,21 @@ def to2(month):
 
 
 def addslash (text):
+	''' Returns an ending slash in a path if it doesn't have one '''
+	if type(text) is not str:
+		raise NotStringError ('Bad input, it must be a string')
+
+	if text == "":
+		return text
+
 	if text [-1] != '/':
 		text += '/'
 	return text
 
 def readmetadate (metadata, exif_key):
+	""" Gets a Metadata object and a tag name and returns its values
+		Metadata object is retireved form GExiv2.Metadata('path/to/file')
+		"""
 	metadate = metadata.get(exif_key)
 	if not (metadate == None or metadate.strip() == ''):
 		logging.debug (exif_key + ' found:' + metadate)
@@ -68,17 +101,11 @@ def lsdirectorytree( directory = os.getenv( 'HOME')):
 	moredirectories = dirlist
 	while len(moredirectories) != 0:
 		newdirectories = moredirectories
-		#reset flag to 0; we assume from start, that there aren't child directories
 		moredirectories = []
-		# print ('\n\n\n','nueva iteración', moredirectories)
 		for a in newdirectories:
-			# checking for items (child directories)
-			# print ('Checking directory', a)
 			añadir = addchilddirectory(a)
-			#adding found items to moredirectories
 			for b in añadir:
 				moredirectories.append(b)
-		#adding found items to dirlist
 		for a in moredirectories:
 			dirlist.append(a)
 	return dirlist
@@ -89,15 +116,10 @@ def addchilddirectory(directorio):
 	Usage: addchilddirectory(directory with absolute path)"""
 	paraañadir = []
 	ficheros = os.listdir(directorio)
-	#print ('ficheros encontrados en: ',directorio, ':\n' , ficheros, '\n')
 	for a in ficheros:
 		item = os.path.join(directorio, a)
-		#check, and if directory, it's added to paths-list
 		if os.path.isdir(item):
-			# print('Directory found: '+ item)
-			# print('Añadiendo elemento para escanear')
 			paraañadir.append(item)
-	# print ('este listado hay que añadirlo para el escaneo: ', paraañadir)
 	return paraañadir
 
 def Nextfilenumber (dest):
