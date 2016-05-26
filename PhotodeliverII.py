@@ -6,12 +6,15 @@
 
 # Module import
 import sys, os, shutil, logging, datetime, time, re
+ 
+import gi  # user to avoid Gi warning
+gi.require_version('GExiv2', '0.10')  # user to avoid Gi warning
+
 from glob import glob
 from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
 from PIL import Image  # for image conversion
 import argparse  # for command line arguments
 import sqlite3  # for sqlite3 Database management
-
 
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
@@ -89,27 +92,6 @@ def readmetadate (metadata, exif_key):
 		logging.debug ('No '+ exif_key + 'found.')
 	return metadate
 
-def lsdirectorytree( directory = os.getenv( 'HOME')):
-	""" Returns a list of a directory and its child directories
-
-	usage:
-	lsdirectorytree ("start directory")
-	By default, user's home directory"""
-	#init list to start
-	dirlist = [directory]
-	#setting the first scan
-	moredirectories = dirlist
-	while len(moredirectories) != 0:
-		newdirectories = moredirectories
-		moredirectories = []
-		for a in newdirectories:
-			añadir = addchilddirectory(a)
-			for b in añadir:
-				moredirectories.append(b)
-		for a in moredirectories:
-			dirlist.append(a)
-	return dirlist
-
 def addchilddirectory(directorio):
 	""" Returns a list of child directories
 
@@ -121,6 +103,28 @@ def addchilddirectory(directorio):
 		if os.path.isdir(item):
 			paraañadir.append(item)
 	return paraañadir
+
+def lsdirectorytree( directory = os.getenv( 'HOME')):
+	""" Returns a list of a directory and its child directories
+
+	usage:
+	lsdirectorytree ("start directory")
+	By default, user's home directory
+
+	Own start directory is also returned as result
+	"""
+	#init list to start, own start directory is included
+	dirlist = [directory]
+	#setting the first scan
+	moredirectories = dirlist
+	while len (moredirectories) != 0:
+		newdirectories = moredirectories
+		moredirectories = []
+		for element in newdirectories:
+			añadir = addchilddirectory(element)
+			moredirectories += añadir
+		dirlist += moredirectories
+	return dirlist
 
 def Nextfilenumber (dest):
 	''' Returns the next filename counter as filename(nnn).ext

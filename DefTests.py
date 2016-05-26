@@ -127,7 +127,32 @@ class addchilddirectory_test (unittest.TestCase):
 			result = PhotodeliverII.addchilddirectory(dirpath)
 			self.assertEqual (set(childlist), set(result))
 
-		
+class lsdirectorytree_test (unittest.TestCase):
+	""" It returns a list of subdirectories, works o absolute and relative paths """
+	known_values = (("Test_examples_container/FolderStructure",
+		[
+		'Test_examples_container/FolderStructure/child 3',
+		'Test_examples_container/FolderStructure/child1',
+		'Test_examples_container/FolderStructure/_child2',
+		'Test_examples_container/FolderStructure/child1/child 1.2',
+		'Test_examples_container/FolderStructure/child1/Child1.1',
+		'Test_examples_container/FolderStructure/child1/emptydirectory',
+		'Test_examples_container/FolderStructure/_child2/child2.2',
+		'Test_examples_container/FolderStructure'
+		])
+		,
+		(('Test_examples_container/FolderStructure/child1/emptydirectory'),
+		('Test_examples_container/FolderStructure/child1/emptydirectory',))
+		)
+
+	def test_known_input(self):
+		for dirpath, childlist in self.known_values:
+			result = PhotodeliverII.lsdirectorytree (dirpath)
+			self.assertEqual (set(childlist), set(result))
+	
+
+
+						
 
 if __name__ == '__main__':
 	unittest.main()
