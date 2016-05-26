@@ -165,9 +165,25 @@ class Nextfilenumber_test (unittest.TestCase):
 			result = PhotodeliverII.Nextfilenumber (inputfile)
 			self.assertEqual (outputfile, result)
 	def test_mad_values (self):
-		print ('HELLO')
 		self.assertRaises (PhotodeliverII.EmptyStringError, PhotodeliverII.Nextfilenumber, "")
 		pass	
+
+class enclosedyearfinder (unittest.TestCase):
+	""" searchs for a year in an slash enclosed string,
+	it must return the year string if any or None if it doesn't
+	"""
+	known_values = (
+		("1992", "1992"),
+		("any string",None),
+		("19_90", None),
+		("2000", "2000"),
+		("/",None ),
+		("",None )
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.enclosedyearfinder (string1)
+			self.assertEqual (match, result)
 
 if __name__ == '__main__':
 	unittest.main()

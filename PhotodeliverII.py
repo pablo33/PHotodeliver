@@ -133,7 +133,6 @@ def Nextfilenumber (dest):
 	output: /path/to/filename(n).ext
 		'''
 	if dest == "":
-		print ('hello')
 		raise EmptyStringError ('empty strings as input are not allowed')
 	filename = os.path.basename (dest)
 	extension = os.path.splitext (dest)[1]
@@ -157,6 +156,24 @@ def Nextfilenumber (dest):
 		newfilename = os.path.join( os.path.dirname(dest), filename [0:-cut] + "(" + str(counter) + ")" + extension)
 	return newfilename
 
+def enclosedyearfinder (string):
+	""" searchs for a year string enclosing input text into slashes,
+	it must return the year string if any or None if it doesn't
+	"""
+	wordslash = "/"+string+"/"
+	expr = "/(?P<year>[12]\d{3})/"
+	mo = re.search(expr, wordslash)
+	try:
+		mo.group()
+	except:
+		pass
+	else:
+		fnyear = mo.group ('year')
+		logging.debug( 'found possible year in '+ wordslash +':'+fnyear)
+		return fnyear
+	return
+
+
 def mediaadd(item):
 	#1) Retrieve basic info from the file
 	logging.debug ('## item: '+ item)
@@ -167,7 +184,7 @@ def mediaadd(item):
 	fnDateTimeOriginal = None  # From start we assume a no date found on the file path
 
 	#2) Fetch date identificators form imagepath, serie and serial number if any. 
-	mintepoch = 1899  # In order to discard low year values, this is the lowest year. 
+	mintepoch = '1899'  # In order to discard low year values, this is the lowest year. 
 
 	# Try to find some date structure in folder paths. (abspath)
 	''' Fetch dates from folder structure, this prevents losing information if exif metadata 
@@ -207,23 +224,15 @@ def mediaadd(item):
 	fnhour = '12'
 	fnmin = '00'
 	fnsec = '00'
-	# C1 - /*Year*/ /month/ /day/ in pathlevels (year must be detected from an upper level first)
 	for word in pathlevels:
-		wordslash = "/"+word+"/"
-			#possible year is a level path:
-		expr = "/(?P<year>[12]\d{3})/"
-		mo = re.search(expr, wordslash)
-		try:
-			mo.group()
-		except:
-			pass
-		else:
-			if int(mo.group('year')) in range (mintepoch, 2038):
-				fnyear = mo.group ('year')
-				logging.debug( 'found possible year in '+ wordslash +':'+fnyear)
-				continue
+		# C1.1 (/year/)
+		yearfound = enclosedyearfinder (word)
+		if yearfound != None and mintepoch < yearfound < '2040':
+			fnyear = yearfound
+			continue
 
-				#possible month is a level path:
+		# C1.2 (/month/)
+		wordslash = "/"+word+"/"  ## Deleteme after C1 is DEFiteizaded
 		if len (word) == 2 and word.isnumeric ():
 			if int(word) in range(1,13):
 				fnmonth = word
@@ -245,7 +254,7 @@ def mediaadd(item):
 		except:
 			pass
 		else:
-			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (mintepoch, 2038):
+			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (int (mintepoch), 2038):
 				fnyear = mo.group ('year')
 				fnmonth = mo.group ('month')
 				logging.debug( 'found possible year-month in'+ wordslash +':'+fnyear+" "+fnmonth)
@@ -258,7 +267,7 @@ def mediaadd(item):
 		except:
 			pass
 		else:
-			if int(mo.group('year')) in range (mintepoch, 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
+			if int(mo.group('year')) in range (int (mintepoch), 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
 				fnyear = mo.group ('year')
 				fnmonth = mo.group ('month')
 				fnday = mo.group ('day')
@@ -274,7 +283,7 @@ def mediaadd(item):
 		logging.debug ("expression %s Not found in %s" %(expr, filename))
 		pass
 	else:			
-		if int(mo.group('year')) in range (mintepoch, 2038):
+		if int(mo.group('year')) in range (int(mintepoch), 2038):
 			fnyear  = mo.group ('year')
 			fnmonth = mo.group ('month')
 			fnday   = mo.group ('day')
@@ -291,7 +300,7 @@ def mediaadd(item):
 		logging.debug ("expression %s Not found in %s" %(expr, filename))
 		pass
 	else:			
-		if int(mo.group('year')) in range (mintepoch, 2038):
+		if int(mo.group('year')) in range (int (mintepoch), 2038):
 			fnyear  = mo.group ('year')
 			fnmonth = mo.group ('month')
 			fnday   = mo.group ('day')
@@ -410,7 +419,7 @@ def mediascan(location):
 	listree = lsdirectorytree (location)
 	nfilesscanned = 0
 
-	# 1.2) get a list of media items and casting into a class
+	# 1.2) get a list of media items
 
 	for d in listree:
 		for ext in wantedmedia:
