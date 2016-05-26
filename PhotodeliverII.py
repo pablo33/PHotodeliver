@@ -37,7 +37,8 @@ class NotStringError(ValueError):
 	pass
 class MalformedPathError(ValueError):
 	pass
-
+class EmptyStringError(ValueError):
+	pass		
 
 
 def itemcheck(pointer):
@@ -119,10 +120,10 @@ def lsdirectorytree( directory = os.getenv( 'HOME')):
 	moredirectories = dirlist
 	while len (moredirectories) != 0:
 		newdirectories = moredirectories
-		moredirectories = []
+		moredirectories = list ()
 		for element in newdirectories:
-			añadir = addchilddirectory(element)
-			moredirectories += añadir
+			toadd = addchilddirectory(element)
+			moredirectories += toadd
 		dirlist += moredirectories
 	return dirlist
 
@@ -131,6 +132,9 @@ def Nextfilenumber (dest):
 	input: /path/to/filename.ext
 	output: /path/to/filename(n).ext
 		'''
+	if dest == "":
+		print ('hello')
+		raise EmptyStringError ('empty strings as input are not allowed')
 	filename = os.path.basename (dest)
 	extension = os.path.splitext (dest)[1]
 	# extract secuence

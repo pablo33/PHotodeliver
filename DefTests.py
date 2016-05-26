@@ -27,7 +27,6 @@ class itemcheck_text_values (unittest.TestCase):
 		for inputstring in malformed_values:
 			self.assertRaises (PhotodeliverII.MalformedPathError, PhotodeliverII.itemcheck, inputstring)
 
-
 class to2_function (unittest.TestCase):
 	known_values = ( (1, "01"),
 					(2, "02"),
@@ -63,7 +62,6 @@ class to2_bad_input_function (unittest.TestCase):
 		for data in self.mad_inputs:
 			self.assertRaises (PhotodeliverII.NotIntegerError, PhotodeliverII.to2, data)
 
-
 class addslash_tests (unittest.TestCase):
 	""" Testing addslash function """
 	known_values = (
@@ -86,8 +84,6 @@ class addslash_tests (unittest.TestCase):
 		for data in self.mad_inputs:
 			self.assertRaises (PhotodeliverII.NotStringError, PhotodeliverII.addslash, data)
 
-
-
 class readmetadate_test (unittest.TestCase):
 	""" tests for readmetadate function
 	it must read some metadate values """
@@ -108,7 +104,6 @@ class readmetadate_test (unittest.TestCase):
 			result = self.metadateobject.get(label)
 			self.assertEqual (MTstring, result)
 
-
 class addchilddirectory_test (unittest.TestCase):
 	"""Tests for addchilddirectory_test """
 	known_values = (("Test_examples_container/FolderStructure",
@@ -128,7 +123,8 @@ class addchilddirectory_test (unittest.TestCase):
 			self.assertEqual (set(childlist), set(result))
 
 class lsdirectorytree_test (unittest.TestCase):
-	""" It returns a list of subdirectories, works o absolute and relative paths """
+	""" It returns a list of subdirectories, works o absolute and relative paths.
+	the result includes its own directory """
 	known_values = (("Test_examples_container/FolderStructure",
 		[
 		'Test_examples_container/FolderStructure/child 3',
@@ -150,9 +146,28 @@ class lsdirectorytree_test (unittest.TestCase):
 			result = PhotodeliverII.lsdirectorytree (dirpath)
 			self.assertEqual (set(childlist), set(result))
 	
-
-
-						
+class Nextfilenumber_test (unittest.TestCase):
+	""" test for Nextfilenumber function """
+	known_values = (
+		("file.jpg", "file(0).jpg"),
+		("file1.jpg", "file1(0).jpg"),
+		("file(0).jpg", "file(1).jpg"),
+		("file(222).jpg", "file(223).jpg"),
+		("file33", "file33(0)"),
+		("file(33)", "file(34)"),
+		("file(-1)", "file(-1)(0)"),
+		("file.","file(0)."),
+		("file(10).", "file(11)."),
+		("file(X).jpg", "file(X)(0).jpg"),
+		)
+	def test_known_input (self):
+		for inputfile, outputfile in self.known_values:
+			result = PhotodeliverII.Nextfilenumber (inputfile)
+			self.assertEqual (outputfile, result)
+	def test_mad_values (self):
+		print ('HELLO')
+		self.assertRaises (PhotodeliverII.EmptyStringError, PhotodeliverII.Nextfilenumber, "")
+		pass	
 
 if __name__ == '__main__':
 	unittest.main()
