@@ -185,6 +185,44 @@ class enclosedyearfinder (unittest.TestCase):
 			result = PhotodeliverII.enclosedyearfinder (string1)
 			self.assertEqual (match, result)
 
+class enclosedmonthfinder (unittest.TestCase):
+	""" Give a string, it returns a string if it is a month number with 2 digits,
+		otherwise it returns None, it also returns a digit mont if it is a text month
+		"""
+	known_values = (
+		("01", "01"),
+		("2" , None),
+		("10" ,"10"),
+		("", None),
+		("jkjkj",None),
+		("enero", "01"),
+		("Febrero", "02"),
+		("MaR", "03"),
+		("dic", "12"),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.enclosedmonthfinder (string1)
+			self.assertEqual (match, result)
+
+
+class encloseddayfinder (unittest.TestCase):
+	""" Give a string, it returns a string if it is a month number with 2 digits,
+		otherwise it returns None, it also returns a digit mont if it is a text month
+		"""
+	known_values = (
+		("01", "01"),
+		("2" , None),
+		("10" ,"10"),
+		("", None),
+		("jkjkj",None),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.encloseddayfinder (string1)
+			self.assertEqual (match, result)
+
+
 if __name__ == '__main__':
 	unittest.main()
 

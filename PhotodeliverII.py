@@ -24,6 +24,21 @@ wantedmedia =  photomedia + moviesmedia
 justif = 20  #  number of characters to justify logging info.
 dupfoldername = 'duplicates'
 
+monthsdict = {
+	"01" : ("enero", "ene"),
+	"02" : ("febrero", "feb"),
+	"03" : ("marzo", "mar"),
+	"04" : ("abril", "abr"),
+	"05" : ("mayo", "may"),
+	"06" : ("junio", "jun"),
+	"07" : ("julio", "jul"),
+	"08" : ("agosto", "ago"),
+	"09" : ("septiembre", "sep"),
+	"10" : ("octubre", "oct"),
+	"11" : ("noviembre", "nov"),
+	"12" : ("diciembre", "dic"),
+	}
+
 # ================================
 # =========  Utils ===============
 # ================================
@@ -159,19 +174,42 @@ def Nextfilenumber (dest):
 def enclosedyearfinder (string):
 	""" searchs for a year string enclosing input text into slashes,
 	it must return the year string if any or None if it doesn't
-	"""
-	wordslash = "/"+string+"/"
-	expr = "/(?P<year>[12]\d{3})/"
-	mo = re.search(expr, wordslash)
+		"""
+	expr = "(?P<year>[12]\d{3})"
+	mo = re.search(expr, string)
 	try:
 		mo.group()
 	except:
 		pass
 	else:
 		fnyear = mo.group ('year')
-		logging.debug( 'found possible year in '+ wordslash +':'+fnyear)
+		logging.debug( 'found possible year in '+ string +':'+fnyear)
 		return fnyear
 	return
+
+def enclosedmonthfinder (string):
+	""" Give a string, returns a string if it is a month number,
+		otherwise it returns None,
+		"""
+	if len (string) == 2 and string.isnumeric ():
+		if int(string) in range(1,13):
+			logging.debug( 'found possible month in'+ string )
+			return string
+	for element in monthsdict:
+		if string.lower() in monthsdict[element]:
+			return element
+	return None
+
+def encloseddayfinder (string):
+	""" Give a string, returns a string if it is a month number,
+		otherwise it returns None,
+		"""
+	if len (string) == 2 and string.isnumeric ():
+		if int(string) in range(1,32):
+			logging.debug( 'found possible day in'+ string )
+			return string
+	return None
+
 
 
 def mediaadd(item):
@@ -232,19 +270,16 @@ def mediaadd(item):
 			continue
 
 		# C1.2 (/month/)
-		wordslash = "/"+word+"/"  ## Deleteme after C1 is DEFiteizaded
-		if len (word) == 2 and word.isnumeric ():
-			if int(word) in range(1,13):
-				fnmonth = word
-				logging.debug( 'found possible month in'+ word +':'+fnmonth)
-				continue
+		monthfound = enclosedmonthfinder (word)
+		if monthfound != None:
+			fnmonth = monthfound
+			continue
 
-				#possible day is a level path:
-		if len (word) == 2 and word.isnumeric ():
-			if int(word) in range(1,32):
-				fnday = word
-				logging.info( 'found possible day in'+ word +':'+fnday)
-				continue
+		# C1.3 (/day/):
+		dayfound = encloseddayfinder (word)
+		if dayfound != None:
+			fnday = dayfound
+			continue
 
 		# C2 (Year-month)
 		expr = ".*(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d).*"
