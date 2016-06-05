@@ -223,6 +223,68 @@ class encloseddayfinder (unittest.TestCase):
 			self.assertEqual (match, result)
 
 
+class yearmonthfinder (unittest.TestCase):
+	""" Given a string, returns a combo of numeric  year-month if it is found
+		return None if not any. Possible separated chars  -_/ and one space
+		"""
+	known_values = (
+		("2010-08",("2010","08")),
+		("2010_09",("2010","09")),
+		("2010 10",("2010","10")),
+		("2015/01",("2015","01")),
+		("2015:01",("2015","01")),
+		("2015.01",("2015","01")),
+		("2010X10",(None,None)),
+		("2010",(None,None)),
+		("2010-8",(None,None)),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.yearmonthfinder (string1)
+			self.assertEqual (match, result)
+
+
+class yearmonthdayfinder (unittest.TestCase):
+	""" Given a string, returns a combo of numeric  year-month-day if it is found,
+		otherwise returns None. Possible separated chars  -_/ and one space
+		"""
+	known_values = (
+		("2010-08-01",("2010","08","01")),
+		("2010_09-10",("2010","09","10")),
+		("2010 10_25",("2010","10","25")),
+		("2015/01/31",("2015","01","31")),
+		("2015:01.31",("2015","01","31")),
+		("2015.01:31",("2015","01","31")),
+		("2010X10X03",(None,None,None)),
+		("2010",(None,None,None)),
+		("2010-8-2",(None,None,None)),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.yearmonthdayfinder (string1)
+			self.assertEqual (match, result)
+
+
+class fulldatefinder (unittest.TestCase):
+	known_values = (
+		("2010-08-01-120500",("2010","08","01","12","05","00",True)),
+		("not at the begining 2010_09-10-00-59-01",("2010","09","10","00","59","01",False)),
+		("2010 10_25-15-03:03",("2010","10","25","15","03","03",True)),
+		("2015 01 31-080910",("2015","01","31","08","09","10", True)),
+		("some text 2015.01.31 18:23:00 more text",("2015","01","31","18","23","00", False)),
+		("20150131_050358",("2015","01","31","05","03","58", True)),
+		("2010X10X03",(None,None,None,None,None,None,None)),
+		("2010/10/1111(a)11",(None,None,None,None,None,None,None)),
+		("2010-8-2-12:03:03",(None,None,None,None,None,None,None)),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.fulldatefinder (string1)
+			self.assertEqual (match, result)
+
+
+
+
 if __name__ == '__main__':
 	unittest.main()
 

@@ -210,6 +210,69 @@ def encloseddayfinder (string):
 			return string
 	return None
 
+def yearmonthfinder (string):
+	""" Given a string, returns a combo of numeric  year-month if it is found,
+		otherwise returns None .
+		"""
+
+	yearmonthfinder
+	expr = ".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]\d).*"
+	mo = re.search(expr, string)
+	try:
+		mo.group()
+	except:
+		pass
+	else:
+		if int (mo.group('month')) in range (1,13) :
+			fnyear = mo.group ('year')
+			fnmonth = mo.group ('month')
+			return fnyear, fnmonth
+	return None, None
+
+def yearmonthdayfinder (string):
+	""" Given a string, returns a combo of numeric  year-month-day if it is found,
+		otherwise returns None.
+		"""
+
+	expr = "(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]\d)[-_ /:.]?(?P<day>[0-3]\d)"
+	mo = re.search(expr, string)
+	try:
+		mo.group()
+	except:
+		pass
+	else:
+		if "00" < mo.group('month') < "13" and "00" < mo.group ('day') < "32":
+			fnyear = mo.group ('year')
+			fnmonth = mo.group ('month')
+			fnday = mo.group ('day')
+			return fnyear, fnmonth, fnday
+	return None, None, None
+
+def fulldatefinder (string):
+	""" Given a string, returns a combo of numeric YYYY-MM-DD-hh-mm-ss True if a full-date-identifier
+		if found, otherwise returns None"""
+	start = False
+	sep = '[-_ :.]'
+	expr = '(?P<year>[12]\d{3})%(sep)s?(?P<month>[01]\d)%(sep)s?(?P<day>[0-3]\d)%(sep)s?(?P<hour>[012]\d)%(sep)s?(?P<min>[0-5]\d)%(sep)s?(?P<sec>[0-5]\d)' %{'sep':'[-_ .:]'}
+	mo = re.search (expr, string)
+	try:
+		mo.group()
+	except:
+		logging.debug ("expression %s Not found in %s" %(expr, string))
+		pass
+	else:
+		year  = mo.group ('year')
+		month = mo.group ('month')
+		day   = mo.group ('day')
+		hour  = mo.group ('hour')
+		minute   = mo.group ('min')
+		sec   = mo.group ('sec')
+		if mo.start() == 0 :
+			start = True
+		return year, month, day, hour, minute, sec, start
+	return None, None, None, None, None, None, None
+
+
 
 
 def mediaadd(item):
@@ -265,9 +328,10 @@ def mediaadd(item):
 	for word in pathlevels:
 		# C1.1 (/year/)
 		yearfound = enclosedyearfinder (word)
-		if yearfound != None and mintepoch < yearfound < '2040':
-			fnyear = yearfound
-			continue
+		if yearfound != None:
+			if mintepoch < yearfound < '2040':
+				fnyear = yearfound
+				continue
 
 		# C1.2 (/month/)
 		monthfound = enclosedmonthfinder (word)
@@ -281,69 +345,45 @@ def mediaadd(item):
 			fnday = dayfound
 			continue
 
-		# C2 (Year-month)
-		expr = ".*(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d).*"
-		mo = re.search(expr, wordslash)
-		try:
-			mo.group()
-		except:
-			pass
-		else:
-			if int (mo.group('month')) in range (1,13) and int(mo.group('year')) in range (int (mintepoch), 2038):
-				fnyear = mo.group ('year')
-				fnmonth = mo.group ('month')
-				logging.debug( 'found possible year-month in'+ wordslash +':'+fnyear+" "+fnmonth)
+		# C2.1 (Year-month)
+		yearfound, monthfound = yearmonthfinder (word)
+		if yearfound != None:
+			if mintepoch < yearfound < "2038":
+				fnyear = yearfound
+				fnmonth = monthfound
 
-		# C3: (Year-month-day)
-		expr = "(?P<year>[12]\d{3})[-_ /]?(?P<month>[01]\d)[-_ /]?(?P<day>[0-3]\d)"
-		mo = re.search(expr, wordslash)
-		try:
-			mo.group()
-		except:
-			pass
-		else:
-			if int(mo.group('year')) in range (int (mintepoch), 2038) and int (mo.group('month')) in range (1,13) and int (mo.group ('day')) in range (1,32):
-				fnyear = mo.group ('year')
-				fnmonth = mo.group ('month')
-				fnday = mo.group ('day')
-				logging.debug( 'found possible year-month-day in' + wordslash + ':' + fnyear + " " + fnmonth + " " + fnday)
+		# C3.1: (Year-month-day)
+		yearfound, monthfound, dayfound = yearmonthdayfinder (word)
+		if yearfound != None:
+			if mintepoch < yearfound < "2038":
+				fnyear = yearfound
+				fnmonth = monthfound
+				fnday = dayfound
 
-
+		
 	# C4: YYYY-MM-DD  in filename
-	expr = '(?P<year>[12]\d{3})[-_ .:]?(?P<month>[01]\d)[-_ .:]?(?P<day>[0-3]\d)'
-	mo = re.search (expr, filename)
-	try:
-		mo.group()
-	except:
-		logging.debug ("expression %s Not found in %s" %(expr, filename))
-		pass
-	else:			
-		if int(mo.group('year')) in range (int(mintepoch), 2038):
-			fnyear  = mo.group ('year')
-			fnmonth = mo.group ('month')
-			fnday   = mo.group ('day')
-			logging.debug ( 'found year,month and day identifier in filename')
-
+	yearfound, monthfound, dayfound = yearmonthdayfinder (filename)
+	if yearfound != None:
+		if mintepoch < yearfound < "2038":
+			fnyear = yearfound
+			fnmonth = monthfound
+			fnday = dayfound
 
 	# C5: YYYYMMDD-HHMMSS  in filename
 	Imdatestart = False  # Flag to inform a starting full-date-identifier at the start of the file.
-	expr = '(?P<year>[12]\d{3})[-_ .:]?(?P<month>[01]\d)[-_ .:]?(?P<day>[0-3]\d)[-_ .:]?(?P<hour>[012]\d)[-_ .:]?(?P<min>[0-5]\d)[-_ .:]?(?P<sec>[0-5]\d)'
-	mo = re.search (expr, filename)
-	try:
-		mo.group()
-	except:
-		logging.debug ("expression %s Not found in %s" %(expr, filename))
-		pass
-	else:			
-		if int(mo.group('year')) in range (int (mintepoch), 2038):
-			fnyear  = mo.group ('year')
-			fnmonth = mo.group ('month')
-			fnday   = mo.group ('day')
-			fnhour  = mo.group ('hour')
-			fnmin   = mo.group ('min')
-			fnsec   = mo.group ('sec')
+	foundtuple = fulldatefinder (filename)
+
+	if foundtuple[0] != None:
+		if mintepoch < foundtuple[0] < "2039":
+			fnyear  = foundtuple[0]
+			fnmonth = foundtuple[1]
+			fnday   = foundtuple[2]
+			fnhour  = foundtuple[3]
+			fnmin   = foundtuple[4]
+			fnsec   = foundtuple[5]
 			logging.debug ( 'found full date identifier in ' + filename)
-			if mo.start() == 0 :
+			#if mo.start() == 0 :
+			if foundtuple[6] == True:
 				logging.debug ('filename starts with a full date identifier: '+ filename )
 				Imdatestart = True  #  True means that filename starts with full-date serial in its name (item will not add any date in his filename again)
 
