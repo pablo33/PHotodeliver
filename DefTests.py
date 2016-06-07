@@ -283,7 +283,53 @@ class fulldatefinder (unittest.TestCase):
 			self.assertEqual (match, result)
 
 
+class serieserial (unittest.TestCase):
+	known_values = (
+		("WA-1234", ('WA','1234')),
+		("WA_3456", ('WA','3456')),
+		("WA 1111", ('WA','1111')),
+		("IMG-0001", ('IMG','0001')),
+		("IMG 9999", ('IMG','9999')),
+		("IMG_1234--dfdf", ('IMG','1234')),
+		("beforePICT-0001ending", ('PICT','0001')),
+		("MVI5005", ('MVI','5005')),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.serieserial (string1)
+			self.assertEqual (match, result)
 
+
+class Fetchmetadata(unittest.TestCase):
+	""" Given an imagepath, it returns a tuple with 3 values:
+		ImageModel, ImageMake and Image date of creation """
+	known_values = (
+		("Test_examples_container/Single_image/img_1771.jpg", ('Canon','Canon PowerShot S40','2003:12:14 12:01:44')),
+		("Test_examples_container/Some Photos/20160606_195355.jpg", ('SAMSUNG','SM-A300FU','2016:06:06 19:53:55')),
+		("Test_examples_container/Some Photos/Screenshot from 2016-06-07 23-45-47.png",(None, None, None))
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.Fetchmetadata (string1)
+			self.assertEqual (match, result)
+
+forceassignfromfilename = False
+class mediainfo (unittest.TestCase):
+	""" given a media path, it returns it's info on a tuple with 12 elements"""
+	
+	known_values = (
+		("Test_examples_container/Single_image/img_1771.jpg", ('','','','','','','','','','','')),
+		("Test_examples_container/Some Photos/20160606_195355.jpg", ('','','','','','','','','','','','')),
+		("Test_examples_container/Some Photos/Screenshot from 2016-06-07 23-45-47.png", ('','','','','','','','','','','','')),		
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.mediainfo (string1, False)
+			self.assertEqual (match, result)
+
+
+
+		
 
 if __name__ == '__main__':
 	unittest.main()

@@ -272,13 +272,60 @@ def fulldatefinder (string):
 		return year, month, day, hour, minute, sec, start
 	return None, None, None, None, None, None, None
 
+def serieserial (string):
+	''' given a filename string, it returns serie and serial number (tuple)
+		otherwise it returns None'''
+	
+	imserie  = None
+	imserial = None
+	seriallist = ['WA[-_ ]?[0-9]{4}',
+					'IMG[-_ ]?[0-9]{4}',
+					'PICT[-_ ]?[0-9]{4}',
+					'MVI[-_ ]?[0-9]{4}',
+					]
+	serialdict = { seriallist[0]: '(?P<se>WA)[-_ ]?(?P<sn>[0-9]{4})',
+					seriallist[1] : '(?P<se>IMG)[-_ ]?(?P<sn>[0-9]{4})',
+					seriallist[2] : '(?P<se>PICT)[-_ ]?(?P<sn>[0-9]{4})',
+					seriallist[3] : '(?P<se>MVI)[-_ ]?(?P<sn>[0-9]{4})',
+					}
+	sf = False
+	for expr in seriallist :
+		mo = re.search (expr, string)
+		try:
+			mo.group()
+		except:
+			logging.debug ("expression %s Not found in %s" %(expr, string))
+			continue
+		else:
+			mo = re.search ( serialdict[expr], string)
+			logging.debug ("expression %s found in %s" %(expr, string))
+			sf = True
+			break
+	# setting serie and serial number
+	if sf == True:
+		imserie  = mo.group ('se')
+		imserial = mo.group ('sn')
+		logging.debug ( 'Item serie and serial number (' + string + '): '+ imserie + ' ' +  imserial)
+	return imserie, imserial
 
 
+def Fetchmetadata (imagepath):
+	ImageModel, ImageMake, textdate = '','', None
+	metadata = GExiv2.Metadata(imagepath)
+	
+	ImageMake = readmetadate( metadata ,'Exif.Image.Make')
+	ImageModel = readmetadate( metadata ,'Exif.Image.Model')
+	textdate = readmetadate( metadata ,'Exif.Photo.DateTimeOriginal')
+	if textdate == None:
+		textdate = readmetadate( metadata ,'Exif.Photo.DateTimeDigitized')
+		if textdate == None:
+			textdate = readmetadate( metadata ,'Exif.Image.DateTime')
+	return ImageMake, ImageModel, textdate
 
-def mediaadd(item):
+def mediainfo (abspath, forceassignfromfilename):
+
 	#1) Retrieve basic info from the file
-	logging.debug ('## item: '+ item)
-	abspath = item
+	logging.debug ('## item: '+ abspath)
 	filename, fileext = os.path.splitext(os.path.basename (abspath))
 	Statdate = datetime.datetime.utcfromtimestamp(os.path.getmtime (abspath))
 	filebytes = os.path.getsize(abspath)  # logging.debug ('fileTepoch (from Stat): '.ljust( justif ) + str(fileTepoch))
@@ -309,11 +356,7 @@ def mediaadd(item):
 		The day, hour-minutes and seconds asigned are 01, 12:00:00 + image serial number (in seconds) for each image to preserve an order.
 		'''
 	## Cutting main tree from fullpaths.
-	if abspath.startswith (originlocation):
-		branch = abspath[ len ( originlocation ):]
-	else:
-		branch = abspath[ len ( destlocation ):]
-	pathlevels = os.path.dirname (branch).split ('/')
+	pathlevels = os.path.dirname (abspath).split ('/')
 	# Removig not wanted slashes
 	if '' in pathlevels:
 		pathlevels.remove('')
@@ -369,7 +412,7 @@ def mediaadd(item):
 			fnmonth = monthfound
 			fnday = dayfound
 
-	# C5: YYYYMMDD-HHMMSS  in filename
+	# C5: YYYYMMDD-HHMMSS  in filename and find a starting full-date identifier
 	Imdatestart = False  # Flag to inform a starting full-date-identifier at the start of the file.
 	foundtuple = fulldatefinder (filename)
 
@@ -395,54 +438,15 @@ def mediaadd(item):
 		fnDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
 
 
+	# Fetch Serial number from filename
+	imserie, imserial = serieserial (filename)
 
-	# Serial number
-	seriallist = ['WA[-_ ]?[0-9]{4}',
-					'IMG[-_ ]?[0-9]{4}',
-					'PICT[-_ ]?[0-9]{4}',
-					'MVI[-_ ]?[0-9]{4}'
-					]
-	serialdict = { seriallist[0]: '(?P<se>WA)[-_ ]?(?P<sn>[0-9]{4})',
-					seriallist[1] : '(?P<se>IMG)[-_ ]?(?P<sn>[0-9]{4})',
-					seriallist[2] : '(?P<se>PICT)[-_ ]?(?P<sn>[0-9]{4})',
-					seriallist[3] : '(?P<se>MVI)[-_ ]?(?P<sn>[0-9]{4})'}
-	sf = False
-	for expr in seriallist :
-		mo = re.search (expr, filename)
-		try:
-			mo.group()
-		except:
-			logging.debug ("expression %s Not found in %s" %(expr, filename))
-			continue
-		else:
-			mo = re.search ( serialdict[expr], filename)
-			logging.debug ("expression %s found in %s" %(expr, filename))
-			sf = True
-			break
-	# setting serie and serial number
-	if sf == True:
-		imserie  = mo.group ('se')
-		imserial = mo.group ('sn')
-		logging.debug ( 'Item serie and serial number (' + filename + '): '+ imserie + ' ' +  imserial)
-	else:
-		imserie  = None
-		imserial = None	
-	
 
-	# Fetch image metadata (if any) 
+	# Fetch image metadata: ImageModel, ImageMake and Image date of creation
 	textdate = None
 	MetaDateTimeOriginal = None
 	if fileext.lower() in ['.jpg', '.jpeg', '.raw', '.png']:
-		metadata = GExiv2.Metadata(abspath)
-		
-		ImageModel = readmetadate( metadata ,'Exif.Image.Model')
-		ImageMake = readmetadate( metadata ,'Exif.Image.Make')
-		textdate = readmetadate( metadata ,'Exif.Photo.DateTimeOriginal')
-		if textdate == None:
-			textdate = readmetadate( metadata ,'Exif.Photo.DateTimeDigitized')
-			if textdate == None:
-				textdate = readmetadate( metadata ,'Exif.Image.DateTime')
-		
+		ImageMake, ImageModel, textdate = Fetchmetadata (abspath)
 		if textdate != None: 
 			MetaDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
 
@@ -454,13 +458,13 @@ def mediaadd(item):
 	or from stat
 	'''
 	TimeOriginal = None  # From start we assign None if no matches are found.
-	decideflag = None  # Flag storing the decision.
+	decideflag = None  # Flag to trace the decision.
 
 	# Set Creation Date from Metadata if it is found,
 	if MetaDateTimeOriginal != None and forceassignfromfilename == False:
 		TimeOriginal = MetaDateTimeOriginal
 		decideflag = 'Metadata'
-		logging.debug ('Image Creation date has been set from image metadata: ' + str(TimeOriginal))
+		logging.debug ('Image Creation date has been set from image metadata: ' + str (TimeOriginal))
 	else:
 		# Set Creation Date extracted from filename/path
 		if fnDateTimeOriginal != None :
@@ -483,10 +487,19 @@ def mediaadd(item):
 
 	if TimeOriginal == None :
 		logging.debug ( "Can't guess Image date of Creation" )
+	return filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial
 
 
-	con.execute ('INSERT INTO files (Fullfilepath, Filename, Fileext, Filebytes, Imdatestart,Pathdate, Exifdate, Statdate , Timeoriginal , Decideflag, Imgserie, Imgserial) \
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [ item, filename, fileext, filebytes, Imdatestart,fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial ])
+def mediaadd (abspath):
+	if abspath.startswith (originlocation):
+		branch = abspath[ len ( originlocation ):]
+	else:
+		branch = abspath[ len ( destlocation ):]
+
+	filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial = mediainfo (branch, forceassignfromfilename)
+
+	con.execute ('INSERT INTO files (Fullfilepath, Filename, Fileext, Filebytes, Imdatestart, Pathdate, Exifdate, Statdate , Timeoriginal , Decideflag, Imgserie, Imgserial) \
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [ abspath, filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial ])
 
 def mediascan(location):
 	
@@ -510,7 +523,7 @@ def mediascan(location):
 						if a.find ('.thumbnails') != -1 :
 							logging.debug ('Item %s was not included (Thumbnails folder)' %(a) )
 							continue
-					mediaadd (a)  # Add item info to DB
+					mediaadd (a)  # Add item's info to DB
 					nfilesscanned += 1
 	msg = str(nfilesscanned) + ' files where fetched at ' + location
 	print (msg); logging.info (msg)
