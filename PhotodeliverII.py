@@ -172,20 +172,12 @@ def Nextfilenumber (dest):
 	return newfilename
 
 def enclosedyearfinder (string):
-	""" searchs for a year string enclosing input text into slashes,
+	""" searchs for a year string,
 	it must return the year string if any or None if it doesn't
 		"""
-	expr = "(?P<year>[12]\d{3})"
-	mo = re.search(expr, string)
-	try:
-		mo.group()
-	except:
-		pass
-	else:
-		fnyear = mo.group ('year')
-		logging.debug( 'found possible year in '+ string +':'+fnyear)
-		return fnyear
-	return
+	if string.isnumeric():
+		return string
+	return None
 
 def enclosedmonthfinder (string):
 	""" Give a string, returns a string if it is a month number,
@@ -275,21 +267,13 @@ def fulldatefinder (string):
 def serieserial (string):
 	''' given a filename string, it returns serie and serial number (tuple)
 		otherwise it returns None'''
-	
-	imserie  = None
-	imserial = None
-	seriallist = ['WA[-_ ]?[0-9]{4}',
-					'IMG[-_ ]?[0-9]{4}',
-					'PICT[-_ ]?[0-9]{4}',
-					'MVI[-_ ]?[0-9]{4}',
-					]
-	serialdict = { seriallist[0]: '(?P<se>WA)[-_ ]?(?P<sn>[0-9]{4})',
-					seriallist[1] : '(?P<se>IMG)[-_ ]?(?P<sn>[0-9]{4})',
-					seriallist[2] : '(?P<se>PICT)[-_ ]?(?P<sn>[0-9]{4})',
-					seriallist[3] : '(?P<se>MVI)[-_ ]?(?P<sn>[0-9]{4})',
-					}
-	sf = False
-	for expr in seriallist :
+
+	sep = '[-_ ]'
+	seriallist = ['WA','IMG','PICT','MVI','img']
+	#seriallist = seriallist + seriallist.lower() for 
+	for key in seriallist :
+		expr = '(?P<se>%s%s?)(?P<sn>[0-9]{4})'%(key,sep)
+
 		mo = re.search (expr, string)
 		try:
 			mo.group()
@@ -297,16 +281,12 @@ def serieserial (string):
 			logging.debug ("expression %s Not found in %s" %(expr, string))
 			continue
 		else:
-			mo = re.search ( serialdict[expr], string)
 			logging.debug ("expression %s found in %s" %(expr, string))
-			sf = True
-			break
-	# setting serie and serial number
-	if sf == True:
-		imserie  = mo.group ('se')
-		imserial = mo.group ('sn')
-		logging.debug ( 'Item serie and serial number (' + string + '): '+ imserie + ' ' +  imserial)
-	return imserie, imserial
+			imserie  = mo.group ('se')
+			imserial = mo.group ('sn')
+			logging.debug ( 'Item serie and serial number (' + string + '): '+ imserie + ' ' +  imserial)
+			return imserie, imserial
+	return None, None
 
 
 def Fetchmetadata (imagepath):
@@ -496,7 +476,7 @@ def mediaadd (abspath):
 	else:
 		branch = abspath[ len ( destlocation ):]
 
-	filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial = mediainfo (branch, forceassignfromfilename)
+	filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial = mediainfo (abspath, forceassignfromfilename)
 
 	con.execute ('INSERT INTO files (Fullfilepath, Filename, Fileext, Filebytes, Imdatestart, Pathdate, Exifdate, Statdate , Timeoriginal , Decideflag, Imgserie, Imgserial) \
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [ abspath, filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial ])

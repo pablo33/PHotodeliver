@@ -2,7 +2,7 @@
 # Test Configuration
 import unittest
 import PhotodeliverII
-
+import datetime
 
 
 
@@ -285,14 +285,15 @@ class fulldatefinder (unittest.TestCase):
 
 class serieserial (unittest.TestCase):
 	known_values = (
-		("WA-1234", ('WA','1234')),
-		("WA_3456", ('WA','3456')),
-		("WA 1111", ('WA','1111')),
-		("IMG-0001", ('IMG','0001')),
-		("IMG 9999", ('IMG','9999')),
-		("IMG_1234--dfdf", ('IMG','1234')),
-		("beforePICT-0001ending", ('PICT','0001')),
+		("WA-1234", ('WA-','1234')),
+		("WA_3456", ('WA_','3456')),
+		("WA 1111", ('WA ','1111')),
+		("IMG-0001", ('IMG-','0001')),
+		("IMG 9999", ('IMG ','9999')),
+		("IMG_1234--dfdf", ('IMG_','1234')),
+		("beforePICT-0001ending", ('PICT-','0001')),
 		("MVI5005", ('MVI','5005')),
+		("img_1771", ('img_','1771')),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
@@ -315,19 +316,66 @@ class Fetchmetadata(unittest.TestCase):
 
 forceassignfromfilename = False
 class mediainfo (unittest.TestCase):
-	""" given a media path, it returns it's info on a tuple with 12 elements"""
+	""" given a media path, it returns it's info on a tuple with 11 elements
+
+		filename,
+		fileext,
+		filebytes,
+		Imdatestart,
+		fnDateTimeOriginal,
+		MetaDateTimeOriginal,
+		Statdate,
+		TimeOriginal,
+		decideflag,
+		imserie,
+		imserial
+		"""
 	
 	known_values = (
-		("Test_examples_container/Single_image/img_1771.jpg", ('','','','','','','','','','','')),
-		("Test_examples_container/Some Photos/20160606_195355.jpg", ('','','','','','','','','','','','')),
-		("Test_examples_container/Some Photos/Screenshot from 2016-06-07 23-45-47.png", ('','','','','','','','','','','','')),		
+		("Test_examples_container/Single_image/img_1771.jpg", (
+			'img_1771',
+			'.jpg',
+			32764,
+			False,
+			None,
+			datetime.datetime(2003, 12, 14, 12, 1, 44),
+			datetime.datetime(2016, 5, 24, 17, 47, 48),
+			datetime.datetime(2003, 12, 14, 12, 1, 44),
+			'Metadata',
+			'img_',
+			'1771'
+			)),
+		("Test_examples_container/Some Photos/20160606_195355.jpg", (
+			'20160606_195355',
+			'.jpg',
+			2168684,
+			True,
+			datetime.datetime(2016, 6, 6, 19, 53, 55),
+			datetime.datetime(2016, 6, 6, 19, 53, 55),
+			datetime.datetime(2016, 6, 6, 20, 53, 12),
+			datetime.datetime(2016, 6, 6, 19, 53, 55),
+			'Metadata',
+			None,
+			None
+			)),
+		("Test_examples_container/Some Photos/Screenshot from 2016-06-07 23-45-47.png", (
+			'Screenshot from 2016-06-07 23-45-47',
+			'.png',
+			48012,
+			False,
+			datetime.datetime(2016, 6, 7, 23, 45, 47),
+			None,
+			datetime.datetime(2016, 6, 7, 21, 46, 9),
+			datetime.datetime(2016, 6, 7, 23, 45, 47),
+			'Filepath',
+			None,
+			None
+			)),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
 			result = PhotodeliverII.mediainfo (string1, False)
 			self.assertEqual (match, result)
-
-
 
 		
 
