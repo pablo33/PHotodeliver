@@ -541,7 +541,7 @@ if __name__ == "__main__":
 	eventminpictures = 8  # Minimum number of pictures to assign a day-event
 	gap = 60*60*5  # Number of seconds between shots to be considered both pictures to the same event.
 	copymode = 'm'  # 'c' for copy or 'm' to move new files
-	considerdestinationitems = True  # Consider destination items in order to group media files in events.
+	considerdestinationitems = True  # Consider destination items in order to group media files in events, files at destination location will remains as is.
 	moveexistentfiles = False  # True / False ...... True for move/reagroup or False to keep existent files at its place (Do nothing).
 	ignoreTrash = True  # True / False .... Ignore paths starting with '.Trash'
 	preservealbums = True  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
@@ -577,7 +577,7 @@ if __name__ == "__main__":
 	parser.add_argument("-cpmode", "--copymode", choices = ['c','m'],
 	                    help="'c' for copy or 'm' to move new files.")
 	parser.add_argument("-cdi", "--considerdestinationitems", choices = [1,0], type = int,
-	                    help="Consider destination items in order to group media files in events.")
+	                    help="Consider destination items in order to group media files in events, files at destination location will remains as is.")
 	parser.add_argument("-mef", "--moveexistentfiles", choices = [1,0], type = int,
 	                    help="True for move/reagroup or False to keep existent files at its place (Do nothing)")
 	parser.add_argument("-it", "--ignoreTrash", choices = [1,0], type = int,
