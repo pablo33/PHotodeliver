@@ -1163,8 +1163,8 @@ if __name__ == "__main__":
 				if itemcheck(i) != 'folder':
 					logging.warning ('\tDoes not exists or is not a folder. Skipping')
 					continue			
-				if len (os.listdir(i)) == 0:
-					if args.dummy != True: 
+				if len (os.listdir(i)) == 0 and i not in {originlocation[:-1], destlocation[:-1]}:
+					if args.dummy != True:
 						shutil.rmtree (i)
 					logging.info ('\tfolder has been removed. (was empty)')
 					foldercollectionnext.add (os.path.dirname(i))
