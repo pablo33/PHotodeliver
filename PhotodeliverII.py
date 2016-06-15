@@ -440,11 +440,12 @@ def mediainfo (abspath, forceassignfromfilename):
 	TimeOriginal = None  # From start we assign None if no matches are found.
 	decideflag = None  # Flag to trace the decision.
 
-	# Set Creation Date from Metadata if it is found,
-	if MetaDateTimeOriginal != None and forceassignfromfilename == False:
+	# Set Creation Date from Metadata if it is found
+	if MetaDateTimeOriginal != None and ((forceassignfromfilename == False) or (forceassignfromfilename == True and fnDateTimeOriginal  == None )) :
 		TimeOriginal = MetaDateTimeOriginal
 		decideflag = 'Metadata'
 		logging.debug ('Image Creation date has been set from image metadata: ' + str (TimeOriginal))
+
 	else:
 		# Set Creation Date extracted from filename/path
 		if fnDateTimeOriginal != None :

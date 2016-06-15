@@ -255,7 +255,70 @@ class TestPack2 (unittest.TestCase):
 	def test_simplegroup (self):
 		''' Simple grouping in events, (5 minimun pictures in this test)
 			clear folders is active
-			consider destination files is active
+			consider destination files is active and
+			moveexistent files is also active. this will move the files on destination folder.
+			'''
+
+		SetTestPack (self.reftest)
+		os.system ('python3 PhotodeliverII.py \
+			 -ol %(testfolder)s/originlocation \
+			 -dl %(testfolder)s/destlocation \
+			 -rm 0 \
+			 -rp 0 \
+			 -minp 5 \
+			 -gap 28800 \
+			 -cpmode m \
+			 -cdi 1 \
+			 -mef 1 \
+			 -it 1 \
+			 -pa 1 \
+			 -faff 0 \
+			 -clean 1 \
+			 -sfm 0 \
+			 -conv 0 \
+			 '%{'testfolder':self.testfolder}
+			 )
+
+		known_values = set ([
+			'Test_examples_container/UserTests/Test2/originlocation',
+			'Test_examples_container/UserTests/Test2/destlocation',
+			'Test_examples_container/UserTests/Test2/destlocation/2015',
+			'Test_examples_container/UserTests/Test2/destlocation/2015/2015-12',
+			'Test_examples_container/UserTests/Test2/destlocation/2015/2015-12/Screenshot from 2015-12-13 23-20-58.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2015/2015-12/Screenshot from 2015-12-13 23-20-33.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2015/2015-12/Screenshot from 2015-12-13 23-20-49.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2016',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13/Screenshot from 2016-06-13 23-17-06.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13/Screenshot from 2016-06-13 23-17-20.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13/Screenshot from 2016-06-13 23-17-13.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13/Screenshot from 2016-06-13 23-17-26.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13/Screenshot from 2016-06-13 23-16-48.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2016/2016-06-13/Screenshot from 2016-06-13 23-17-00.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2014',
+			'Test_examples_container/UserTests/Test2/destlocation/2014/2014-05-10',
+			'Test_examples_container/UserTests/Test2/destlocation/2014/2014-05-10/Screenshot from 2014-05-10_1.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2014/2014-05-10/Screenshot from 2014-05-10_4.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2014/2014-05-10/Screenshot from 2014-05-10_3.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2014/2014-05-10/Screenshot from 2014-05-10_2.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2014/2014-05-10/Screenshot from 2014-05-10_5.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_1.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2003',
+			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21',
+			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_2.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_3.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_4 already on dest folder.png',
+			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_5 already on destination.png',
+			])
+
+		result = FetchFileSet (self.testfolder)
+		self.assertEqual(known_values, result)
+
+	def test_simplegroup2 (self):
+		''' Simple grouping in events, (5 minimun pictures in this test)
+			clear folders is active
+			consider destination files is active and
+			moveexistent files not active. this will Preserve files on destination folder.
 			'''
 
 		SetTestPack (self.reftest)
@@ -306,8 +369,112 @@ class TestPack2 (unittest.TestCase):
 			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21',
 			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_2.png',
 			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_3.png',
-			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_4 already on dest folder.png',
-			'Test_examples_container/UserTests/Test2/destlocation/2003/2003-03-21/Screenshot from 2003-03-21_5 already on destination.png',
+			'Test_examples_container/UserTests/Test2/destlocation/Screenshot from 2003-03-21_4 already on dest folder.png',
+			'Test_examples_container/UserTests/Test2/destlocation/Screenshot from 2003-03-21_5 already on destination.png',
+			])
+
+		result = FetchFileSet (self.testfolder)
+		self.assertEqual(known_values, result)
+
+
+class TestPack3 (unittest.TestCase):
+	""" Converting files and adding metadata to JPEG files, TestPack3 """
+
+	reftest = 'Test3'
+	testfolder = os.path.join (dyntestfolder,reftest)
+
+	
+	def test_faff (self):
+		''' No grouping
+			clear folders is active
+			storefilemetadata is active
+			convert files is active
+			'''
+
+		SetTestPack (self.reftest)
+		os.system ('python3 PhotodeliverII.py \
+			 -ol %(testfolder)s/originlocation \
+			 -dl %(testfolder)s/destlocation \
+			 -rm 0 \
+			 -rp 0 \
+			 -minp 0 \
+			 -gap 0 \
+			 -cpmode m \
+			 -cdi 0 \
+			 -mef 0 \
+			 -it 1 \
+			 -pa 1 \
+			 -faff 0 \
+			 -clean 1 \
+			 -sfm 1 \
+			 -conv 1 \
+			 '%{'testfolder':self.testfolder}
+			 )
+
+		known_values = set ([
+			'Test_examples_container/UserTests/Test3/originlocation',
+			'Test_examples_container/UserTests/Test3/destlocation',
+			'Test_examples_container/UserTests/Test3/destlocation/2003',
+			'Test_examples_container/UserTests/Test3/destlocation/2003/2003-12',
+			'Test_examples_container/UserTests/Test3/destlocation/2003/2003-12/img_1771.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2004',
+			'Test_examples_container/UserTests/Test3/destlocation/2004/2004-03',
+			'Test_examples_container/UserTests/Test3/destlocation/2004/2004-03/Nooriginalmetadate.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2016',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/Screenshot from 2016-06-07 23-45-47.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate/Nodatenormetadate.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate/drop.avi',
+			])
+
+		result = FetchFileSet (self.testfolder)
+		self.assertEqual(known_values, result)
+		# assert that exif metadata is really stored in resulting pictures.
+
+
+	def test_faff (self):
+		''' No grouping
+			clear folders is active
+			storefilemetadata is active
+			convert files is active
+			'''
+
+		SetTestPack (self.reftest)
+		os.system ('python3 PhotodeliverII.py \
+			 -ol %(testfolder)s/originlocation \
+			 -dl %(testfolder)s/destlocation \
+			 -rm 0 \
+			 -rp 0 \
+			 -minp 0 \
+			 -gap 0 \
+			 -cpmode m \
+			 -cdi 0 \
+			 -mef 0 \
+			 -it 1 \
+			 -pa 1 \
+			 -faff 1 \
+			 -clean 1 \
+			 -sfm 1 \
+			 -conv 1 \
+			 '%{'testfolder':self.testfolder}
+			 )
+
+		known_values = set ([
+			'Test_examples_container/UserTests/Test3/originlocation',
+			'Test_examples_container/UserTests/Test3/destlocation',
+			'Test_examples_container/UserTests/Test3/destlocation/2003',
+			'Test_examples_container/UserTests/Test3/destlocation/2003/2003-12',
+			'Test_examples_container/UserTests/Test3/destlocation/2003/2003-12/img_1771.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2004',
+			'Test_examples_container/UserTests/Test3/destlocation/2004/2004-03',
+			'Test_examples_container/UserTests/Test3/destlocation/2004/2004-03/Nooriginalmetadate.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2016',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/Screenshot from 2016-06-07 23-45-47.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate/Nodatenormetadate.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate/drop.avi',
 			])
 
 		result = FetchFileSet (self.testfolder)
