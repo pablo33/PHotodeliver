@@ -538,5 +538,78 @@ class TestPack3 (unittest.TestCase):
 		# assert that exif metadata is really stored in resulting pictures.
 
 
+class TestPack4 (unittest.TestCase):
+	""" Retrieving event names, RenameFiles, TestPack4 """
+
+	reftest = 'Test4'
+	testfolder = os.path.join (dyntestfolder,reftest)
+
+	
+	def test_faff (self):
+		''' No grouping
+			clear folders is active
+			storefilemetadata is active
+			--forceassignfromfilename 1
+			convert files is active
+			'''
+
+		SetTestPack (self.reftest)
+		os.system ('python3 PhotodeliverII.py \
+			 -ol %(testfolder)s/originlocation \
+			 -dl %(testfolder)s/destlocation \
+			 -rm 1 \
+			 -rp 1 \
+			 -minp 5 \
+			 -gap 28800 \
+			 -cpmode m \
+			 -cdi 1 \
+			 -mef 1 \
+			 -it 1 \
+			 -pa 1 \
+			 -faff 1 \
+			 -clean 1 \
+			 -sfm 1 \
+			 -conv 1 \
+			 '%{'testfolder':self.testfolder}
+			 )
+
+		known_values = set ([
+			'Test_examples_container/UserTests/Test4/originlocation',
+			'Test_examples_container/UserTests/Test4/destlocation',
+			'Test_examples_container/UserTests/Test4/destlocation/2003',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 Same day but another event',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 Same day but another event/20030321_120000-Screenshot from 2003-03-21_1.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 Same day but another event/20030321_120000-Screenshot from 2003-03-21_2.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 Same day but another event/20030321_120000-Screenshot from 2003-03-21_3.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 already an event named',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 already an event named/20030321_120000-Screenshot from 2003-03-21_5 already on destination.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2003/2003-03-21 already an event named/20030321_120000-Screenshot from 2003-03-21_4 already on dest folder.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2014',
+			'Test_examples_container/UserTests/Test4/destlocation/2014/2014-05-10',
+			'Test_examples_container/UserTests/Test4/destlocation/2014/2014-05-10/20140510_120000-Screenshot from 2014-05-10_5.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2014/2014-05-10/20140510_120000-Screenshot from 2014-05-10_4.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2014/2014-05-10/20140510_120000-Screenshot from 2014-05-10_2.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2014/2014-05-10/20140510_120000-Screenshot from 2014-05-10_3.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2015',
+			'Test_examples_container/UserTests/Test4/destlocation/2014/2014-05-10/20140510_120000-Screenshot from 2014-05-10_1.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2015/2015-12/20151213_232033-Screenshot from 2015-12-13 23-20-33.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2015/2015-12',
+			'Test_examples_container/UserTests/Test4/destlocation/2015/2015-12/20151213_232049-Screenshot from 2015-12-13 23-20-49.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2015/2015-12/20151213_232058-Screenshot from 2015-12-13 23-20-58.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2016',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231713-Screenshot from 2016-06-13 23-17-13.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231648-Screenshot from 2016-06-13 23-16-48.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231706-Screenshot from 2016-06-13 23-17-06.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231720-Screenshot from 2016-06-13 23-17-20.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231726-Screenshot from 2016-06-13 23-17-26.jpg',
+			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231700-Screenshot from 2016-06-13 23-17-00.jpg',
+			])
+
+		result = FetchFileSet (self.testfolder)
+		self.assertEqual(known_values, result)
+		# assert that exif metadata is really stored in resulting pictures.
+
+
 if __name__ == '__main__':
 	unittest.main()
