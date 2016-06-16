@@ -378,7 +378,7 @@ class TestPack2 (unittest.TestCase):
 
 
 class TestPack3 (unittest.TestCase):
-	""" Converting files and adding metadata to JPEG files, TestPack3 """
+	""" Converting files and adding metadata to JPEG files, RenameFiles, TestPack3 """
 
 	reftest = 'Test3'
 	testfolder = os.path.join (dyntestfolder,reftest)
@@ -388,6 +388,7 @@ class TestPack3 (unittest.TestCase):
 		''' No grouping
 			clear folders is active
 			storefilemetadata is active
+			--forceassignfromfilename 0
 			convert files is active
 			'''
 
@@ -423,6 +424,7 @@ class TestPack3 (unittest.TestCase):
 			'Test_examples_container/UserTests/Test3/destlocation/2016',
 			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06',
 			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/Screenshot from 2016-06-07 23-45-47.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/20160606_195355.jpg',
 			'Test_examples_container/UserTests/Test3/destlocation/nodate',
 			'Test_examples_container/UserTests/Test3/destlocation/nodate/Nodatenormetadate.jpg',
 			'Test_examples_container/UserTests/Test3/destlocation/nodate/drop.avi',
@@ -437,6 +439,7 @@ class TestPack3 (unittest.TestCase):
 		''' No grouping
 			clear folders is active
 			storefilemetadata is active
+			--forceassignfromfilename 1
 			convert files is active
 			'''
 
@@ -472,6 +475,7 @@ class TestPack3 (unittest.TestCase):
 			'Test_examples_container/UserTests/Test3/destlocation/2016',
 			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06',
 			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/Screenshot from 2016-06-07 23-45-47.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/20160606_195355.jpg',
 			'Test_examples_container/UserTests/Test3/destlocation/nodate',
 			'Test_examples_container/UserTests/Test3/destlocation/nodate/Nodatenormetadate.jpg',
 			'Test_examples_container/UserTests/Test3/destlocation/nodate/drop.avi',
@@ -480,6 +484,58 @@ class TestPack3 (unittest.TestCase):
 		result = FetchFileSet (self.testfolder)
 		self.assertEqual(known_values, result)
 
+
+	def test_renamephotos (self):
+		''' No grouping
+			clear folders is active
+			storefilemetadata is active
+			--forceassignfromfilename 0
+			--renamephotos is active
+			--renamevideos is active
+			convert files is active
+			'''
+
+		SetTestPack (self.reftest)
+		os.system ('python3 PhotodeliverII.py \
+			 -ol %(testfolder)s/originlocation \
+			 -dl %(testfolder)s/destlocation \
+			 -rm 1 \
+			 -rp 1 \
+			 -minp 0 \
+			 -gap 0 \
+			 -cpmode m \
+			 -cdi 0 \
+			 -mef 0 \
+			 -it 1 \
+			 -pa 1 \
+			 -faff 0 \
+			 -clean 1 \
+			 -sfm 1 \
+			 -conv 1 \
+			 '%{'testfolder':self.testfolder}
+			 )
+
+		known_values = set ([
+			'Test_examples_container/UserTests/Test3/originlocation',
+			'Test_examples_container/UserTests/Test3/destlocation',
+			'Test_examples_container/UserTests/Test3/destlocation/2003',
+			'Test_examples_container/UserTests/Test3/destlocation/2003/2003-12',
+			'Test_examples_container/UserTests/Test3/destlocation/2003/2003-12/20031214_120144-img_1771.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2004',
+			'Test_examples_container/UserTests/Test3/destlocation/2004/2004-03',
+			'Test_examples_container/UserTests/Test3/destlocation/2004/2004-03/20040301_120000-Nooriginalmetadate.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2016',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/20160606_195355.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/2016/2016-06/20160607_234547-Screenshot from 2016-06-07 23-45-47.jpg',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate/drop.avi',
+			'Test_examples_container/UserTests/Test3/destlocation/nodate/Nodatenormetadate.jpg',
+			])
+
+		result = FetchFileSet (self.testfolder)
+		self.assertEqual(known_values, result)
+		# assert that exif metadata is really stored in resulting pictures.
 
 
 if __name__ == '__main__':
