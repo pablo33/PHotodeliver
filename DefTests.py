@@ -377,6 +377,21 @@ class mediainfo (unittest.TestCase):
 			result = PhotodeliverII.mediainfo (string1, False)
 			self.assertEqual (match, result)
 
+
+class findeventname (unittest.TestCase):
+	""" Given a text, it returns a possible event name:
+		returns empty string if no event is found."""
+	known_values = (
+		('2016-01-01 Event name 01/', 'Event name 01'),
+		('2016-01-01Event name 01/and some more info.jpg', 'Event name 01'),
+		('bla bla bla 2016-01-01Event name 01/and some more info.jpg', 'Event name 01'),
+		('bla bla bla/2016-01-01 Event name 01/2010-12-01 picture.jpg', 'Event name 01'),
+		)
+	def test_known_values (self):
+		for string1, match in self.known_values:
+			result = PhotodeliverII.findeventname (string1)
+			self.assertEqual (match, result)
+
 		
 
 if __name__ == '__main__':

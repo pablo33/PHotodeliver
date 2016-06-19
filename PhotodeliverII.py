@@ -6,15 +6,14 @@
 
 # Module import
 import sys, os, shutil, logging, datetime, time, re
- 
-import gi  # user to avoid Gi warning
-gi.require_version('GExiv2', '0.10')  # user to avoid Gi warning
-
 from glob import glob
-from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
-from PIL import Image  # for image conversion
 import argparse  # for command line arguments
 import sqlite3  # for sqlite3 Database management
+ 
+import gi  # used to avoid Gi warning
+gi.require_version('GExiv2', '0.10')  # user to avoid Gi warning
+from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
+from PIL import Image  # for image conversion
 
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
@@ -510,6 +509,54 @@ def mediascan(location):
 	print (msg); logging.info (msg)
 	return nfilesscanned
 
+def showgeneralinfo():
+	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Metadata'")
+	nfiles = ((cursor.fetchone())[0])
+	msg = str(nfiles) + ' files already had metadata and will preserve it.'
+	print (msg); logging.info (msg)
+
+	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is NULL")
+	nfiles = ((cursor.fetchone())[0])
+	msg = str(nfiles) + ' files have not date metadata and a date have been retrieved from the filename or path.'
+	print (msg); logging.info (msg)
+
+	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is not NULL")
+	nfiles = ((cursor.fetchone())[0])
+	msg = str(nfiles) + ' files have a date metadata but a date have been retrieved from the filename or the path and it will rewritted (-faff option has been activated).'
+	print (msg); logging.info (msg)
+
+	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Stat'")
+	nfiles = ((cursor.fetchone())[0])
+	msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames, and their date of creation will be assigned from the file creation date (Stat).'
+	print (msg); logging.info (msg)
+
+	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag is NULL ")
+	nfiles = ((cursor.fetchone())[0])
+	msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date as date of creation.'
+	print (msg); logging.info (msg)
+	return
+
+def findeventname(Abranch):
+	expr = "[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
+	mo = re.search(expr, Abranch)
+	try:
+		mo.group()
+	except:
+		return ''
+	else:
+		return mo.group('XeventnameX')
+	'''
+	#  /YYYY-MM XeventnameX/
+	expr = "/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/"
+	mo = re.search(expr, a)
+	try:
+		mo.group()
+	except:
+		pass
+	else:
+		eventnameflag = True
+		eventname = mo.group('XeventnameX')
+	'''
 
 # # # # # Main # # # #  #
 if __name__ == "__main__": 
@@ -891,12 +938,10 @@ if __name__ == "__main__":
 
 	Totalfiles = 0
 	if not (originlocation == '' or originlocation == destlocation):
-		nfilesscanned = mediascan (originlocation)
-		Totalfiles += nfilesscanned
+		Totalfiles += mediascan (originlocation)
 		con.commit()
 
-	nfilesscanned = mediascan (destlocation)
-	Totalfiles += nfilesscanned
+	Totalfiles += mediascan (destlocation)
 	con.commit()
 
 	msg = '-'*20+'\n'+ str(Totalfiles) + ' Total files scanned'
@@ -908,32 +953,7 @@ if __name__ == "__main__":
 
 
 	# 1.2) Show general info
-	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Metadata'")
-	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files already had metadata and will preserve it.'
-	print (msg); logging.info (msg)
-
-	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is NULL")
-	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files have not date metadata and a date have been retrieved from the filename or path.'
-	print (msg); logging.info (msg)
-
-	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is not NULL")
-	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files have a date metadata but a date have been retrieved from the filename or the path and it will rewritted (-faff option has been activated).'
-	print (msg); logging.info (msg)
-
-	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Stat'")
-	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames, and their date of creation will be assigned from the file creation date (Stat).'
-	print (msg); logging.info (msg)
-
-	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag is NULL ")
-	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date as date of creation.'
-	print (msg); logging.info (msg)
-
-
+	showgeneralinfo ()
 
 
 	# 2) Processing items 
@@ -992,7 +1012,12 @@ if __name__ == "__main__":
 	cursor.execute ('SELECT Fullfilepath, Timeoriginal, Eventdate, Filename, Fileext, Filebytes,Imdatestart FROM files ORDER BY Timeoriginal')
 	for i in cursor:
 		a, Timeoriginal, Eventdate, Filename, fileext, filebytes,Imdatestart = i
-		eventname = ''
+		if a.startswith(destlocation):
+			Abranch = a.replace(destlocation,'')
+		else:
+			Abranch = a.replace(originlocation,'')
+
+		# eventname = None
 		eventnameflag = False
 
 		# 3.1) Skipping processing a new path to files into destination folder if moveexistentfiles is False
@@ -1015,42 +1040,16 @@ if __name__ == "__main__":
 				if a.startswith(os.path.join(destlocation,"nodate")):
 					dest = a
 				else:
-					if a.startswith(destlocation):
-						dest = os.path.join(destlocation, "nodate", a.replace(destlocation,''))
-					else:
-						dest = os.path.join(destlocation, "nodate", a.replace(originlocation,''))
+					dest = os.path.join(destlocation, "nodate", Abranch)
 
 			else:
 				itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+
 				# Check origin dir Structure for an already event name
-				'''
-				#  /YYYY-MM Xeventname/
-				expr = "/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/"
-				mo = re.search(expr, a)
-				try:
-					mo.group()
-				except:
-					pass
-				else:
+				eventname = findeventname (Abranch)
+				if eventname != '':
 					eventnameflag = True
-					eventname = mo.group('XeventnameX')
-				'''
-				#  /YYYY-MM-DD Xeventname/
-				expr = "/[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
-				mo = re.search(expr, a)
-				try:
-					mo.group()
-				except:
-					pass
-				else:
-					eventnameflag = True
-					eventname = mo.group('XeventnameX')
-
-				# retrieve the name & set Even-Flag to True
-				if eventnameflag == True:
 					logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
-
-
 
 				# Getting a possible event day
 				# deliver
