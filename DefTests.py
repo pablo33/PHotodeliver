@@ -314,8 +314,8 @@ class Fetchmetadata(unittest.TestCase):
 			result = PhotodeliverII.Fetchmetadata (string1)
 			self.assertEqual (match, result)
 
-forceassignfromfilename = False
 class mediainfo (unittest.TestCase):
+	#forceassignfromfilename = False
 	""" given a media path, it returns it's info on a tuple with 11 elements
 
 		filename,
@@ -380,12 +380,19 @@ class mediainfo (unittest.TestCase):
 
 class findeventname (unittest.TestCase):
 	""" Given a text, it returns a possible event name:
-		returns empty string if no event is found."""
+		returns empty string if no event is found.
+		Event-names are retrieved from directories, so an event name input-
+		string, should end in slash."""
 	known_values = (
+		('2016-01-01 Event name 01', ''),
 		('2016-01-01 Event name 01/', 'Event name 01'),
 		('2016-01-01Event name 01/and some more info.jpg', 'Event name 01'),
 		('bla bla bla 2016-01-01Event name 01/and some more info.jpg', 'Event name 01'),
 		('bla bla bla/2016-01-01 Event name 01/2010-12-01 picture.jpg', 'Event name 01'),
+		('bla bla bla/2016-01 Event name _/2010-12-01 real event name/ picture.jpg', 'real event name'),
+		('bla bla bla/2016-01 Event name _/20101201 real event name/ picture.jpg', 'real event name'),
+		('bla bla bla/2016-01 Event name _/2010-12 01 real event name/ picture.jpg', 'real event name'),
+		('bla bla bla/2016-01 Event name _/2010-12 01real event name/ picture.jpg', 'real event name'),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:

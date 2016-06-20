@@ -537,26 +537,23 @@ def showgeneralinfo():
 	return
 
 def findeventname(Abranch):
-	expr = "[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/"
-	mo = re.search(expr, Abranch)
-	try:
-		mo.group()
-	except:
-		return ''
-	else:
-		return mo.group('XeventnameX')
-	'''
 	#  /YYYY-MM XeventnameX/
-	expr = "/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/"
-	mo = re.search(expr, a)
-	try:
-		mo.group()
-	except:
-		pass
-	else:
-		eventnameflag = True
-		eventname = mo.group('XeventnameX')
-	'''
+	exprlst = [
+		"/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/",
+		"[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/",
+		]
+
+	#  /YYYY-MM-DD XeventnameX/
+	eventname = ''
+	for expr in exprlst: 
+		mo = re.search(expr, Abranch)
+		try:
+			mo.group()
+		except:
+			pass
+		else:
+			eventname = mo.group('XeventnameX')
+	return eventname
 
 # # # # # Main # # # #  #
 if __name__ == "__main__": 
