@@ -34,8 +34,9 @@ def FetchFileSet (path):
 	return fileset
 
 
+
 class TestPack1 (unittest.TestCase):
-	""" Single photo input and processing TestPack1 """
+	''' Single photo input and processing TestPack1 '''
 
 	reftest = 'Test1'
 	testfolder = os.path.join (dyntestfolder,reftest)
@@ -246,7 +247,7 @@ class TestPack1 (unittest.TestCase):
 		self.assertEqual(known_values, result)
 
 class TestPack2 (unittest.TestCase):
-	""" Multiple photo handling and processing, TestPack2 """
+	''' Multiple photo handling and processing, TestPack2 '''
 
 	reftest = 'Test2'
 	testfolder = os.path.join (dyntestfolder,reftest)
@@ -378,7 +379,7 @@ class TestPack2 (unittest.TestCase):
 
 
 class TestPack3 (unittest.TestCase):
-	""" Converting files and adding metadata to JPEG files, RenameFiles, TestPack3 """
+	''' Converting files and adding metadata to JPEG files, RenameFiles, TestPack3 '''
 
 	reftest = 'Test3'
 	testfolder = os.path.join (dyntestfolder,reftest)
@@ -539,7 +540,7 @@ class TestPack3 (unittest.TestCase):
 
 
 class TestPack4 (unittest.TestCase):
-	""" Retrieving event names, RenameFiles, TestPack4 """
+	''' Retrieving event names, RenameFiles, TestPack4 '''
 
 	reftest = 'Test4'
 	testfolder = os.path.join (dyntestfolder,reftest)
@@ -604,6 +605,77 @@ class TestPack4 (unittest.TestCase):
 			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231720-Screenshot from 2016-06-13 23-17-20.jpg',
 			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231726-Screenshot from 2016-06-13 23-17-26.jpg',
 			'Test_examples_container/UserTests/Test4/destlocation/2016/2016-06-13 Event name 01/20160613_231700-Screenshot from 2016-06-13 23-17-00.jpg',
+			])
+
+		result = FetchFileSet (self.testfolder)
+		self.assertEqual(known_values, result)
+		# assert that exif metadata is really stored in resulting pictures.
+
+
+class TestPack5 (unittest.TestCase):
+	''' The duplicated files test, TestPack5 '''
+
+	reftest = 'Test5'
+	testfolder = os.path.join (dyntestfolder,reftest)
+
+	
+	def test_simpleduplicates (self):
+		''' No grouping
+			clear folders is active
+			'''
+
+		SetTestPack (self.reftest)
+		os.system ('python3 PhotodeliverII.py \
+			 -ol %(testfolder)s/originlocation \
+			 -dl %(testfolder)s/destlocation \
+			 -rm 0 \
+			 -rp 0 \
+			 -minp 0 \
+			 -gap 0 \
+			 -cpmode m \
+			 -cdi 1 \
+			 -mef 1 \
+			 -it 1 \
+			 -pa 1 \
+			 -faff 0 \
+			 -clean 1 \
+			 -sfm 0 \
+			 -conv 1 \
+			 '%{'testfolder':self.testfolder}
+			 )
+
+		known_values = set ([
+			'Test_examples_container/UserTests/Test5/destlocation',
+			'Test_examples_container/UserTests/Test5/destlocation/2003',
+			'Test_examples_container/UserTests/Test5/destlocation/2003/2003-03',
+			'Test_examples_container/UserTests/Test5/destlocation/2003/2003-03/Screenshot from 2003-03-21_1.jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/2003/2003-12',
+			'Test_examples_container/UserTests/Test5/destlocation/2003/2003-12/single file dup at dest - img_1771.jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/2014',
+			'Test_examples_container/UserTests/Test5/destlocation/2014/2014-03',
+			'Test_examples_container/UserTests/Test5/destlocation/2014/2014-03/2014-03-02 To be converted and already in jpg(0).jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/2014/2014-03/2014-03-02 To be converted and already in jpg.jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/2015',
+			'Test_examples_container/UserTests/Test5/destlocation/2015/2015-12',
+			'Test_examples_container/UserTests/Test5/destlocation/2015/2015-12/Screenshot from 2015-12-13 23-20-33.jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/2015/2015-12/Screenshot from 2015-12-13 23-20-49.jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/2015/2015-12/Screenshot from 2015-12-13 23-20-58.jpg',
+			'Test_examples_container/UserTests/Test5/originlocation',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_/Screenshot from 2016-06-13 23-16-48.png',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_/Screenshot from 2016-06-13 23-17-00.png',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_/Screenshot from 2016-06-13 23-17-06.png',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_/Screenshot from 2016-06-13 23-17-13.png',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_/Screenshot from 2016-06-13 23-17-20.png',
+			'Test_examples_container/UserTests/Test5/originlocation/do not touch this album_/Screenshot from 2016-06-13 23-17-26.png',
+			'Test_examples_container/UserTests/Test5/originlocation/duplicates',
+			'Test_examples_container/UserTests/Test5/originlocation/duplicates/3 files duplicated',
+			'Test_examples_container/UserTests/Test5/originlocation/duplicates/3 files duplicated/Screenshot from 2015-12-13 23-20-33.jpg',
+			'Test_examples_container/UserTests/Test5/originlocation/duplicates/3 files duplicated/Screenshot from 2015-12-13 23-20-49.jpg',
+			'Test_examples_container/UserTests/Test5/originlocation/duplicates/3 files duplicated/Screenshot from 2015-12-13 23-20-58.jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/nodate/Nodatenormetadate(0).jpg',
+			'Test_examples_container/UserTests/Test5/destlocation/nodate',
+			'Test_examples_container/UserTests/Test5/destlocation/nodate/Nodatenormetadate.jpg',
 			])
 
 		result = FetchFileSet (self.testfolder)
