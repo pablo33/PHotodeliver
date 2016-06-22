@@ -9,7 +9,7 @@ Script for automatic image metadatation and grouping by day event.
 
 Use it to:  
 - Metadate scanned photographs stored in folders whose date was stored as part of its path.
-- Process whatsapp images and inform its exif metadata before manage it on Shotwell.
+- Process images and insert its exif metadata before manage them on Shotwell.
 - Automatically convert .png into .jpg files.
 - Sort and order images into a folder structure.
 - Detect possible duplicates.
@@ -17,6 +17,7 @@ Use it to:
 - Replace actual image metadata with a date found in the path.
 - Rename image files acordingly to it's date metadata. (YYYYMMDD_hhmmss filename.jpg)
 - Automatically group a buch of images a into a month and/or day-event structure.
+- Process every image and set it into a destination.
 
 Dependencies:
 needs at least ubuntu 14.04
