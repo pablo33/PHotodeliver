@@ -52,7 +52,7 @@ class NotStringError(ValueError):
 class MalformedPathError(ValueError):
 	pass
 class EmptyStringError(ValueError):
-	pass		
+	pass
 
 
 def itemcheck(pointer):
@@ -287,7 +287,6 @@ def serieserial (string):
 			return imserie, imserial
 	return None, None
 
-
 def Fetchmetadata (imagepath):
 	ImageModel, ImageMake, textdate = '','', None
 	metadata = GExiv2.Metadata(imagepath)
@@ -469,7 +468,6 @@ def mediainfo (abspath, forceassignfromfilename):
 		logging.debug ( "Can't guess Image date of Creation" )
 	return filename, fileext, filebytes, Imdatestart, fnDateTimeOriginal, MetaDateTimeOriginal, Statdate, TimeOriginal, decideflag, imserie, imserial
 
-
 def mediaadd (abspath):
 	if abspath.startswith (originlocation):
 		branch = abspath[ len ( originlocation ):]
@@ -580,7 +578,7 @@ if __name__ == "__main__":
 	# This options can be overriden by entering a command line options
 	# This is a python file. Be careful and see the sintaxt.
 
-	originlocation = '%(home)s/originlocation'  #  Path from where retrieve new images.
+	originlocations = '%(home)s/originlocation'  #  Path or list of paths from where retrieve new images.
 	destlocation = '%(home)s/destlocation'  # 'Path to where you want to store your photos'
 	renamemovies = True  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
 	renamephotos = True  # This option adds a creation date in media file-names (useful if you want to modify them)
@@ -595,6 +593,8 @@ if __name__ == "__main__":
 	cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
 	storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
 	convert = True  # True / False ......  Try to convert image formats in JPG
+	centinelmode = False  # True / False ......  True means that the routine keeps resident in memory, it loops every centinelsecondssleep
+	centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iteration.
 	'''%{'home':os.getenv('HOME')}
 		)
 		f.close()
@@ -608,8 +608,8 @@ if __name__ == "__main__":
 	# Retrieve cmd line parameters >>>>>>>>
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-ol", "--originlocation",
-	                    help="Path from where retrieve new images.")
+	parser.add_argument("-ol", "--originlocations", nargs='+',
+	                    help="Path or list of paths from where retrieve new images.")
 	parser.add_argument("-dl", "--destlocation",
 	                    help="Path to where you want to store your photos.")
 	parser.add_argument("-rm", "--renamemovies", choices = [1,0], type = int,
@@ -640,6 +640,10 @@ if __name__ == "__main__":
 	                    help="Convert image format to JPG file")
 	parser.add_argument("-sc", "--showconfig", action="store_true",
 	                    help="Show running parameters, args parameters, config file parameters & exit")
+	parser.add_argument("-sm", "--centinelmode", choices = [1,0], type = int,
+	                    help="Activate the centinelmode, this mode keeps the program running and looping. You can define a number of seconds to sleep between loops.")
+	parser.add_argument("-ssec", "--centinelsecondssleep", type = int,
+	                    help="Number of seconds to sleep after iterating in centinel mode.")
 	parser.add_argument("-test", "--dummy", action="store_true",
 	                    help="Do not perform any file movements. Play on dummy mode.")
 
@@ -648,11 +652,11 @@ if __name__ == "__main__":
 	parametersdyct = {}
 
 	# Getting variables, override config file with args.
-	if args.originlocation == None:
-		originlocation =  Photodelivercfg.originlocation
+	if args.originlocations == None:
+		originlocations =  Photodelivercfg.originlocations
 	else:
-		originlocation = args.originlocation
-	parametersdyct["originlocation"] = originlocation
+		originlocations = args.originlocations
+	parametersdyct["originlocations"] = originlocations
 
 
 	if args.destlocation == None:
@@ -752,6 +756,22 @@ if __name__ == "__main__":
 		convert = [False,True][args.convert]
 	parametersdyct["convert"] = convert
 
+
+	if args.centinelmode == None:
+		centinelmode = Photodelivercfg.centinelmode
+	else:
+		centinelmode = [False,True][args.centinelmode]
+	parametersdyct["centinelmode"] = centinelmode
+
+
+	if args.centinelsecondssleep == None:
+		centinelsecondssleep = Photodelivercfg.centinelsecondssleep
+	else:
+		centinelsecondssleep = args.centinelsecondssleep
+	parametersdyct["centinelsecondssleep"] = centinelsecondssleep
+
+
+
 	# ===============================
 	# The logging module.
 	# ===============================
@@ -779,24 +799,22 @@ if __name__ == "__main__":
 	logging.info("======================================================")
 	logging.info("================ Starting a new run===================")
 	logging.info("======================================================")
-	logging.info('From:' + originlocation)
-	logging.info('  To:' + destlocation)
-
 
 	# Check inconsistences
 	errmsgs = []
 
 	#-ol
-	if originlocation != '':
-		if itemcheck(originlocation) != 'folder':
-			errmsgs.append ('\nSource folder does not exist:\n-ol\t'+originlocation)
-			logging.critical('Source folder does not exist: ' + originlocation)
-		originlocation = addslash (originlocation)
+	if originlocations != '':
+		if type (originlocations) == str:
+			originlocations = [originlocations,]
 
 	else:
 		if moveexistentfiles == True :
-			print ('Origin location have been not entered, this will reagroup destlocation items.')
+			print ('Origin location have not been entered, this will reagroup destlocation items.')
 			logging.info ('No origin location entered: Reagrouping existent pictures')
+			if centinelmode:
+				print ('Centinelmode is active, this will keep reagrouping the same dest folder every %s seconds'%centinelsecondssleep)
+				logging.info ('Centinelmode is active and Moveexistentfiles is also Active: Reagrouping existent destination pictures forever.')
 		else:
 			errmsgs.append ('No origin location was introduced, and you do not want to reagroup existent items.')
 			logging.critical ('No origin location was introduced, and no interaction was selected.')
@@ -872,6 +890,17 @@ if __name__ == "__main__":
 		errmsgs.append ('\nconvert parameter can only be True or False:\n-conv\t' + str(convert))
 		logging.critical('convert parameter is not True nor False')
 
+	#-sm
+	if type (centinelmode) is not bool :
+		errmsgs.append ('\ncentinelmode parameter can only be True or False:\n-sm\t' + str(centinelmode))
+		logging.critical('centinelmode parameter is not True nor False')
+
+	#-ssec
+	if type(centinelsecondssleep) is not int :
+		errmsgs.append ('\ncentinelsecondssleep parameter can only be an integer:\n-ssec\t' + str(centinelsecondssleep))
+		logging.critical('centinelsecondssleep parameter is not an integer')
+
+
 	# exitting if errors econuntered
 	if len (errmsgs) != 0 :
 		for a in errmsgs:
@@ -900,276 +929,296 @@ if __name__ == "__main__":
 	# ========= Main module =====================
 	# ===========================================
 
-
-	# 0) Start tmp Database
-
-	if itemcheck (dbpath) == "file":
-		os.remove (dbpath)
-		logging.info("Older tmp database found, it has been deleted.")
-
-	con = sqlite3.connect (dbpath) # it creates one if it doesn't exists
-	cursor = con.cursor() # object to manage queries
-
-	# 0.1) Setup DB
-	cursor.execute ('CREATE TABLE files (\
-		Fullfilepath char NOT NULL ,\
-		Filename char NOT NULL ,\
-		Fileext char  ,\
-		Targetfilepath char  ,\
-		Filebytes int NOT NULL ,\
-		Imdatestart Boolean, \
-		Exifdate date  ,\
-		Pathdate date  ,\
-		Statdate date NOT NULL,\
-		Timeoriginal date, \
-		Decideflag char, \
-		Convertfileflag Boolean, \
-		Imgserie char, \
-		Imgserial char, \
-		EventID int, \
-		Eventdate date \
-		)')
-	con.commit()
-
-	# 1) Get items
-	# 1.1) Retrieving items to process
-
-	Totalfiles = 0
-	if not (originlocation == '' or originlocation == destlocation):
-		Totalfiles += mediascan (originlocation)
-		con.commit()
-
-	Totalfiles += mediascan (destlocation)
-	con.commit()
-
-	msg = '-'*20+'\n'+ str(Totalfiles) + ' Total files scanned'
-	print (msg); logging.info (msg)
-	if Totalfiles == 0 :
-		print ('Nothing to import / reagroup.')
-		logging.warning ('Thereis nothing to import or reagroup, please revise your configuration, exitting....')
-		exit()
+	while True:
+		for originlocation in originlocations:
+			if originlocation != '':
+				if itemcheck(originlocation) != 'folder':
+					msg = 'Source folder does not exist: ' + originlocation
+					print ("\nWARNING:"+msg+"\n"); logging.critical(msg)
+					continue				
+				originlocation = addslash (originlocation)
 
 
-	# 1.2) Show general info
-	showgeneralinfo ()
+			logging.info('')
+			logging.info('='*50)
+			logging.info('From:' + originlocation)
+			logging.info('  To:' + destlocation)
+			print ('='*50,'Processing files at'+ originlocation, sep='\n')
+			# 0) Start tmp Database
 
+			if itemcheck (dbpath) == 'file':
+				os.remove (dbpath)
+				logging.info("Older tmp database found, it has been deleted.")
 
-	# 2) Processing items 
-	# 2.1) Grouping in events, máx distance is gap seconds
+			con = sqlite3.connect (dbpath) # it creates one if it doesn't exists
+			cursor = con.cursor() # object to manage queries
 
-	if gap > 0:
-		if considerdestinationitems == True:
-			#considering all items
-			cursor.execute ('SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL ORDER BY Timeoriginal')
-		else:
-			#considering only items at origin folder
-			cursor.execute ("SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL and Fullfilepath LIKE '%s'  ORDER BY Timeoriginal" %(originlocation+"%"))
+			# 0.1) Setup DB
+			cursor.execute ('CREATE TABLE files (\
+				Fullfilepath char NOT NULL ,\
+				Filename char NOT NULL ,\
+				Fileext char  ,\
+				Targetfilepath char  ,\
+				Filebytes int NOT NULL ,\
+				Imdatestart Boolean, \
+				Exifdate date  ,\
+				Pathdate date  ,\
+				Statdate date NOT NULL,\
+				Timeoriginal date, \
+				Decideflag char, \
+				Convertfileflag Boolean, \
+				Imgserie char, \
+				Imgserial char, \
+				EventID int, \
+				Eventdate date \
+				)')
+			con.commit()
 
-		regcounter = 0
-		eventID = 0
-		timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
-		msg = "Group option is activated (-gap option). This will group Pictures closer in time than " + str(timegap) + " in an event day."
-		print (msg); logging.info (msg)
+			# 1) Get items
+			# 1.1) Retrieving items to process
 
-		for i in cursor:
-			regcounter += 1
-			Fullfilepath1, Timestr = i
-			TimeOriginal1 = datetime.datetime.strptime (Timestr, '%Y-%m-%d %H:%M:%S')
-			if regcounter == 1 :
-				TimeOriginal0 = TimeOriginal1
-				Fullfilepath0 = Fullfilepath1
-				con.execute ("UPDATE files set EventID=0 where Fullfilepath = '%s'" %(Fullfilepath1))
+			Totalfiles = 0
+			if not (originlocation == '' or originlocation == destlocation):
+				Totalfiles += mediascan (originlocation)
+				con.commit()
+
+			Totalfiles += mediascan (destlocation)
+			con.commit()
+
+			msg = '-'*20+'\n'+ str(Totalfiles) + ' Total files scanned'
+			print (msg); logging.info (msg)
+			if Totalfiles == 0 :
+				print ('Nothing to import / reagroup.')
+				logging.warning ('Thereis nothing to import or reagroup, please revise your configuration, exitting....')
 				continue
-			diff = TimeOriginal1-TimeOriginal0
-			if diff <= timegap :
-				logging.debug  ('this picture is part of an event with the preceding one')
-			else:
-				logging.debug ('this picture is not part of an event with the preceding one')
-				eventID += 1
-			con.execute ("UPDATE files set EventID=%s where Fullfilepath = '%s'" %(eventID, Fullfilepath1))
 
-			TimeOriginal0 = TimeOriginal1
-			Fullfilepath0 = Fullfilepath1
-			# print (regcounter, eventID, i[1])
-		con.commit()
+			# 1.2) Show general info
+			showgeneralinfo ()
 
-		#2.2) Inform de date of the event. (The minimun date)
-		for i in range (0,eventID+1):
-			# count number of files in that event: 
-			cursor.execute ('SELECT count (Fullfilepath), MIN (Timeoriginal) FROM files where EventID = %s' %(i))
-			nfiles, eventdate = cursor.fetchone()
-			#print (i, nfiles, eventdate)
-			# Set event date if it has the minimun number required.
-			if nfiles >= eventminpictures:
-				print ('')
-				con.execute ("UPDATE files set Eventdate='%s' where EventID = %s" %(eventdate ,i))
-		con.commit()
+			# 2) Processing items 
+			# 2.1) Grouping in events, máx distance is gap seconds
 
-
-	# 3) Set Target files for items
-	cursor.execute ('SELECT Fullfilepath, Timeoriginal, Eventdate, Filename, Fileext, Filebytes,Imdatestart FROM files ORDER BY Timeoriginal')
-	for i in cursor:
-		a, Timeoriginal, Eventdate, Filename, fileext, filebytes,Imdatestart = i
-		if a.startswith(destlocation):
-			Abranch = a.replace(destlocation,'')
-		else:
-			Abranch = a.replace(originlocation,'')
-
-		# eventname = None
-		eventnameflag = False
-
-		# 3.1) Skipping processing a new path to files into destination folder if moveexistentfiles is False
-		if a.startswith(destlocation) and moveexistentfiles == False:
-			logging.debug ('Item %s was not included (moveexistentfiles option is False)' %(a) )
-			continue
-
-		# 3.2) item's fullpath and filename
-		if preservealbums == True and a.find ('_/') != -1 :
-			if a.startswith (destlocation) :
-				logging.debug ('Item %s was not included (Preserving album folder at destination location).' %(a) )
-			else:
-				logging.debug ('Moving item %s to destination preserving its path (is part of an album).' %(a) )
-				dest = os.path.join(destlocation, a.replace(originlocation,''))
-			continue
-
-		else:
-			if Timeoriginal == None:
-				logging.debug ('Moving item %s to nodate folder (it has no date).' %(a) )			
-				if a.startswith(os.path.join(destlocation,"nodate")):
-					dest = a
+			if gap > 0:
+				if considerdestinationitems == True:
+					#considering all items
+					cursor.execute ('SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL ORDER BY Timeoriginal')
 				else:
-					dest = os.path.join(destlocation, "nodate", Abranch)
+					#considering only items at origin folder
+					cursor.execute ("SELECT Fullfilepath, Timeoriginal FROM files where Timeoriginal is not NULL and Fullfilepath LIKE '%s'  ORDER BY Timeoriginal" %(originlocation+"%"))
 
-			else:
-				itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+				regcounter = 0
+				eventID = 0
+				timegap = datetime.timedelta(days=0, seconds=gap, microseconds=0, milliseconds=0, minutes=0, hours=0)
+				msg = "Group option is activated (-gap option). This will group Pictures closer in time than " + str(timegap) + " in an event day."
+				print (msg); logging.info (msg)
 
-				# Check origin dir Structure for an already event name
-				eventname = findeventname (Abranch)
-				if eventname != '':
-					eventnameflag = True
-					logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
-
-				# Getting a possible event day
-				# deliver
-				if eventnameflag == True or Eventdate is not None:
-					#destination includes a day - event
-					if Eventdate == None:
-						Eventdate = itemcreation
+				for i in cursor:
+					regcounter += 1
+					Fullfilepath1, Timestr = i
+					TimeOriginal1 = datetime.datetime.strptime (Timestr, '%Y-%m-%d %H:%M:%S')
+					if regcounter == 1 :
+						TimeOriginal0 = TimeOriginal1
+						Fullfilepath0 = Fullfilepath1
+						con.execute ("UPDATE files set EventID=0 where Fullfilepath = '%s'" %(Fullfilepath1))
+						continue
+					diff = TimeOriginal1-TimeOriginal0
+					if diff <= timegap :
+						logging.debug  ('this picture is part of an event with the preceding one')
 					else:
-						Eventdate = datetime.datetime.strptime (Eventdate, '%Y-%m-%d %H:%M:%S')
-					dest = os.path.join(destlocation, Eventdate.strftime('%Y'), Eventdate.strftime('%Y-%m-%d'), os.path.basename(a))
-					eventnameflag = True
+						logging.debug ('this picture is not part of an event with the preceding one')
+						eventID += 1
+					con.execute ("UPDATE files set EventID=%s where Fullfilepath = '%s'" %(eventID, Fullfilepath1))
+
+					TimeOriginal0 = TimeOriginal1
+					Fullfilepath0 = Fullfilepath1
+					# print (regcounter, eventID, i[1])
+				con.commit()
+
+				#2.2) Inform de date of the event. (The minimun date)
+				for i in range (0,eventID+1):
+					# count number of files in that event: 
+					cursor.execute ('SELECT count (Fullfilepath), MIN (Timeoriginal) FROM files where EventID = %s' %(i))
+					nfiles, eventdate = cursor.fetchone()
+					#print (i, nfiles, eventdate)
+					# Set event date if it has the minimun number required.
+					if nfiles >= eventminpictures:
+						print ('')
+						con.execute ("UPDATE files set Eventdate='%s' where EventID = %s" %(eventdate ,i))
+				con.commit()
+
+
+			# 3) Set Target files for items
+			cursor.execute ('SELECT Fullfilepath, Timeoriginal, Eventdate, Filename, Fileext, Filebytes,Imdatestart FROM files ORDER BY Timeoriginal')
+			for i in cursor:
+				a, Timeoriginal, Eventdate, Filename, fileext, filebytes,Imdatestart = i
+				if a.startswith(destlocation):
+					Abranch = a.replace(destlocation,'')
 				else:
-					#destination only includes a month (go to a various month-box)
-					dest = os.path.join(destlocation, itemcreation.strftime('%Y'), itemcreation.strftime('%Y-%m'), os.path.basename(a))
-				# set date information in filename.
-				if ((renamemovies == True and fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and fileext.lower()[1:] in photomedia)) and Imdatestart != True :
-					dest = os.path.join(os.path.dirname(dest), itemcreation.strftime('%Y%m%d_%H%M%S') + "-" + os.path.basename(dest) )
-		
-		# 3.3) Adding event name in the path
-		if eventnameflag == True:
-			destcheck = os.path.dirname(dest)  # Check destination dir structure ../../aaaa/aaaa-mm-dd*
-			levents = glob(destcheck + '*')
-			if len (levents) != 0 :
-				# (Get event path as existing path for destination)
-				dest = os.path.join(levents.pop(), os.path.basename(dest))
-			else:
-				if eventname != '':
-					eventname = " "+ eventname
-				dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
-		# 3.4) Set convert flag
-		convertfileflag = False
-		if convert == True and fileext.lower() in ['.png','.bmp',]:
-			dest = os.path.splitext(dest)[0]+".jpg"
-			convertfileflag = True
-			logging.info ('Convertfileflag =' + str(convertfileflag))
-		
-		# 3.5) Checkig if it is a duplicated file.
-		while True:
-			if itemcheck (dest) == '':
-				break
-			else:
-				if filebytes != os.path.getsize(dest):
-					dest = Nextfilenumber (dest)
+					Abranch = a.replace(originlocation,'')
+
+				# eventname = None
+				eventnameflag = False
+
+				# 3.1) Skipping processing a new path to files into destination folder if moveexistentfiles is False
+				if a.startswith(destlocation) and moveexistentfiles == False:
+					logging.debug ('Item %s was not included (moveexistentfiles option is False)' %(a) )
 					continue
+
+				# 3.2) item's fullpath and filename
+				if preservealbums == True and a.find ('_/') != -1 :
+					if a.startswith (destlocation) :
+						logging.debug ('Item %s was not included (Preserving album folder at destination location).' %(a) )
+					else:
+						logging.debug ('Moving item %s to destination preserving its path (is part of an album).' %(a) )
+						dest = os.path.join(destlocation, a.replace(originlocation,''))
+					continue
+
 				else:
-					if a.startswith (os.path.join(originlocation,dupfoldername)) or dest.startswith (os.path.join(originlocation,dupfoldername)) or a.startswith (destlocation) :
-						logging.warning('destination item already exists')
-						dest = a
+					if Timeoriginal == None:
+						logging.debug ('Moving item %s to nodate folder (it has no date).' %(a) )			
+						if a.startswith(os.path.join(destlocation,"nodate")):
+							dest = a
+						else:
+							dest = os.path.join(destlocation, "nodate", Abranch)
+
+					else:
+						itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+
+						# Check origin dir Structure for an already event name
+						eventname = findeventname (Abranch)
+						if eventname != '':
+							eventnameflag = True
+							logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
+
+						# Getting a possible event day
+						# deliver
+						if eventnameflag == True or Eventdate is not None:
+							#destination includes a day - event
+							if Eventdate == None:
+								Eventdate = itemcreation
+							else:
+								Eventdate = datetime.datetime.strptime (Eventdate, '%Y-%m-%d %H:%M:%S')
+							dest = os.path.join(destlocation, Eventdate.strftime('%Y'), Eventdate.strftime('%Y-%m-%d'), os.path.basename(a))
+							eventnameflag = True
+						else:
+							#destination only includes a month (go to a various month-box)
+							dest = os.path.join(destlocation, itemcreation.strftime('%Y'), itemcreation.strftime('%Y-%m'), os.path.basename(a))
+						# set date information in filename.
+						if ((renamemovies == True and fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and fileext.lower()[1:] in photomedia)) and Imdatestart != True :
+							dest = os.path.join(os.path.dirname(dest), itemcreation.strftime('%Y%m%d_%H%M%S') + "-" + os.path.basename(dest) )
+				
+				# 3.3) Adding event name in the path
+				if eventnameflag == True:
+					destcheck = os.path.dirname(dest)  # Check destination dir structure ../../aaaa/aaaa-mm-dd*
+					levents = glob(destcheck + '*')
+					if len (levents) != 0 :
+						# (Get event path as existing path for destination)
+						dest = os.path.join(levents.pop(), os.path.basename(dest))
+					else:
+						if eventname != '':
+							eventname = " "+ eventname
+						dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
+				# 3.4) Set convert flag
+				convertfileflag = False
+				if convert == True and fileext.lower() in ['.png','.bmp',]:
+					dest = os.path.splitext(dest)[0]+".jpg"
+					convertfileflag = True
+					logging.info ('Convertfileflag =' + str(convertfileflag))
+				
+				# 3.5) Checkig if it is a duplicated file.
+				while True:
+					if itemcheck (dest) == '':
 						break
 					else:
-						dest = os.path.join (originlocation,dupfoldername, a.replace(originlocation,''))
-						continue
+						if filebytes != os.path.getsize(dest):
+							dest = Nextfilenumber (dest)
+							continue
+						else:
+							if a.startswith (os.path.join(originlocation,dupfoldername)) or dest.startswith (os.path.join(originlocation,dupfoldername)) or a.startswith (destlocation) :
+								logging.warning('destination item already exists')
+								dest = a
+								break
+							else:
+								dest = os.path.join (originlocation,dupfoldername, a.replace(originlocation,''))
+								continue
 
-		con.execute ("UPDATE files set Targetfilepath = '%s', Convertfileflag = '%s' where Fullfilepath = '%s'" %(dest ,convertfileflag, a))
-	con.commit()
+				con.execute ("UPDATE files set Targetfilepath = '%s', Convertfileflag = '%s' where Fullfilepath = '%s'" %(dest ,convertfileflag, a))
+			con.commit()
 
-	# 4) Perform file operations
-	foldercollection = set ()
-	cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath IS NOT NULL')
-	for i in cursor:
-		a, dest, fileext, Timeoriginal, decideflag, convertfileflag = i
-		convertfileflag = eval (convertfileflag)
-		logging.info ('')
-		logging.info ('Processing:')
-		logging.info (a)
-		if itemcheck (os.path.dirname(dest)) == '':
-				if args.dummy != True:
-					os.makedirs (os.path.dirname(dest))
-		# Convert to JPG Option
-		if convertfileflag == True:
-			logging.info ("\t Converting to .jpg")
-			picture = Image.open (a)
-			if args.dummy != True:
-				picture.save (dest)
-			#picture.close()  # commented for ubuntu 14.10 comtabilitiy
-			if copymode == 'm':
-				if args.dummy != True:
-					os.remove (a)
-				logging.info ('\t origin file successfully deleted after conversion.')
-		elif a != dest:
-			if copymode == 'm':
-				if args.dummy != True:
-					shutil.move (a, dest)
-				logging.info ('\t file successfully moved into destination.')
-			else:	
-				if args.dummy != True:
-					shutil.copy (a, dest)
-				logging.info ('\t file successfully copied into destination.')
-
-		if cleaning == True and copymode == 'm':
-			foldercollection.add (os.path.dirname(a))
-
-		# Write metadata into the file-archive
-		if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat']:
-			if args.dummy != True:
-				metadata = GExiv2.Metadata(dest)
-				itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
-				metadata.set_date_time(itemcreation)
-				metadata.save_file()
-			logging.info ('\t' + 'writed metadata to image file.')
-		logging.info ('\t' + dest)
-
-	#4) Cleaning empty directories
-	if cleaning == True:
-		logging.info ('='*10)
-		logging.info ('Checking empty folders to delete them')
-		foldercollectionnext = set()
-		while len(foldercollection) > 0:
-			for i in foldercollection:
-				logging.info ('checking: %s' %i)
-				if itemcheck(i) != 'folder':
-					logging.warning ('\tDoes not exists or is not a folder. Skipping')
-					continue			
-				if len (os.listdir(i)) == 0 and i not in {originlocation[:-1], destlocation[:-1]}:
+			# 4) Perform file operations
+			foldercollection = set ()
+			cursor.execute ('SELECT Fullfilepath, Targetfilepath, Fileext, Timeoriginal, Decideflag, Convertfileflag FROM files WHERE Targetfilepath IS NOT NULL')
+			for i in cursor:
+				a, dest, fileext, Timeoriginal, decideflag, convertfileflag = i
+				convertfileflag = eval (convertfileflag)
+				logging.info ('')
+				logging.info ('Processing:')
+				logging.info (a)
+				if itemcheck (os.path.dirname(dest)) == '':
+						if args.dummy != True:
+							os.makedirs (os.path.dirname(dest))
+				# Convert to JPG Option
+				if convertfileflag == True:
+					logging.info ("\t Converting to .jpg")
+					picture = Image.open (a)
 					if args.dummy != True:
-						shutil.rmtree (i)
-					logging.info ('\tfolder has been removed. (was empty)')
-					foldercollectionnext.add (os.path.dirname(i))
-					logging.debug ('\tadded next level to re-scan')
-			foldercollection = foldercollectionnext
-			foldercollectionnext = set()
+						picture.save (dest)
+					#picture.close()  # commented for ubuntu 14.10 comtabilitiy
+					if copymode == 'm':
+						if args.dummy != True:
+							os.remove (a)
+						logging.info ('\t origin file successfully deleted after conversion.')
+				elif a != dest:
+					if copymode == 'm':
+						if args.dummy != True:
+							shutil.move (a, dest)
+						logging.info ('\t file successfully moved into destination.')
+					else:	
+						if args.dummy != True:
+							shutil.copy (a, dest)
+						logging.info ('\t file successfully copied into destination.')
 
-	#5) Done
-	print ('Done!')
-	''' print a little resumen '''
+				if cleaning == True and copymode == 'm':
+					foldercollection.add (os.path.dirname(a))
+
+				# Write metadata into the file-archive
+				if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat']:
+					if args.dummy != True:
+						metadata = GExiv2.Metadata(dest)
+						itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+						metadata.set_date_time(itemcreation)
+						metadata.save_file()
+					logging.info ('\t' + 'writed metadata to image file.')
+				logging.info ('\t' + dest)
+
+			#4) Cleaning empty directories
+			if cleaning == True:
+				logging.info ('='*10)
+				logging.info ('Checking empty folders to delete them')
+				foldercollectionnext = set()
+				while len(foldercollection) > 0:
+					for i in foldercollection:
+						logging.info ('checking: %s' %i)
+						if itemcheck(i) != 'folder':
+							logging.warning ('\tDoes not exists or is not a folder. Skipping')
+							continue			
+						if len (os.listdir(i)) == 0 and i not in {originlocation[:-1], destlocation[:-1]}:
+							if args.dummy != True:
+								shutil.rmtree (i)
+							logging.info ('\tfolder has been removed. (was empty)')
+							foldercollectionnext.add (os.path.dirname(i))
+							logging.debug ('\tadded next level to re-scan')
+					foldercollection = foldercollectionnext
+					foldercollectionnext = set()
+
+			#5) Done
+			print ('Done!')
+			''' print a little resumen '''
+
+		##) Sleeping and iterating in case of centinelmode
+		if centinelmode:
+			print ('\nsleeping %s seconds\n'%centinelsecondssleep)
+			time.sleep(centinelsecondssleep)
+		else:
+			break
+
