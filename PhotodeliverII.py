@@ -14,6 +14,7 @@ import gi  # used to avoid Gi warning
 gi.require_version('GExiv2', '0.10')  # user to avoid Gi warning
 from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
 from PIL import Image  # for image conversion
+from subprocess import check_output  # Checks if some process is accessing a file
 
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
@@ -551,6 +552,16 @@ def findeventname(Abranch):
 			eventname = mo.group('XeventnameX')
 	return eventname
 
+def fileinuse (entry):
+	''' returns False if file is not beign used (opened), or
+		returns True if file is beign used. 
+		'''
+	try:
+		pids = check_output(["lsof", '-t', entry ])
+	except:
+		return False
+	logging.debug('%s is beign accesed'%(entry))
+	return True
 
 # # # # # Main # # # #  #
 if __name__ == "__main__": 
@@ -572,28 +583,28 @@ if __name__ == "__main__":
 		# Create a new config file
 		f = open(userfileconfig,"w")
 		f.write ('''
-	# Photodeliver Config file.
-	# This options can be overriden by entering a command line options
-	# This is a python file. Be careful and see the sintaxt.
+# Photodeliver Config file.
+# This options can be overriden by entering a command line options
+# This is a python file. Be careful and see the sintaxt.
 
-	originlocations = '%(home)s/originlocation'  #  Path or list of paths from where retrieve new images.
-	destlocation = '%(home)s/destlocation'  # 'Path to where you want to store your photos'
-	renamemovies = True  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
-	renamephotos = True  # This option adds a creation date in media file-names (useful if you want to modify them)
-	eventminpictures = 8  # Minimum number of pictures to assign a day-event
-	gap = 60*60*5  # Number of seconds between shots to be considered both pictures to the same event.
-	copymode = 'm'  # 'c' for copy or 'm' to move new files
-	considerdestinationitems = True  # Consider destination items in order to group media files in events, files at destination location will remains as is.
-	moveexistentfiles = False  # True / False ...... True for move/reagroup or False to keep existent files at its place (Do nothing).
-	ignoreTrash = True  # True / False .... Ignore paths starting with '.Trash'
-	preservealbums = True  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
-	forceassignfromfilename = True  # True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
-	cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
-	storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
-	convert = True  # True / False ......  Try to convert image formats in JPG
-	centinelmode = False  # True / False ......  True means that the routine keeps resident in memory, it loops every centinelsecondssleep
-	centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iteration.
-	'''%{'home':os.getenv('HOME')}
+originlocations = '%(home)s/originlocation'  #  Path or list of paths from where retrieve new images.
+destlocation = '%(home)s/destlocation'  # 'Path to where you want to store your photos'
+renamemovies = True  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
+renamephotos = True  # This option adds a creation date in media file-names (useful if you want to modify them)
+eventminpictures = 8  # Minimum number of pictures to assign a day-event
+gap = 60*60*5  # Number of seconds between shots to be considered both pictures to the same event.
+copymode = 'm'  # 'c' for copy or 'm' to move new files
+considerdestinationitems = True  # Consider destination items in order to group media files in events, files at destination location will remains as is.
+moveexistentfiles = False  # True / False ...... True for move/reagroup or False to keep existent files at its place (Do nothing).
+ignoreTrash = True  # True / False .... Ignore paths starting with '.Trash'
+preservealbums = True  #  True / False  .... Do not include in fileScanning albums. An album is defined by a path that ends in _  pex.  /2015/2015 my album to preserve_/items.png 
+forceassignfromfilename = True  # True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
+cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
+storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
+convert = True  # True / False ......  Try to convert image formats in JPG
+centinelmode = False  # True / False ......  True means that the routine keeps resident in memory, it loops every centinelsecondssleep
+centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iteration.
+'''%{'home':os.getenv('HOME')}
 		)
 		f.close()
 		print ("An user config file has been created at:", userfileconfig)
@@ -606,6 +617,7 @@ if __name__ == "__main__":
 	# Retrieve cmd line parameters >>>>>>>>
 
 	parser = argparse.ArgumentParser()
+
 	parser.add_argument("-ol", "--originlocations", nargs='+',
 	                    help="Path or list of paths from where retrieve new images.")
 	parser.add_argument("-dl", "--destlocation",
@@ -1152,6 +1164,9 @@ if __name__ == "__main__":
 				logging.info ('')
 				logging.info ('Processing:')
 				logging.info (a)
+				if fileinuse (a):
+					logging.warning ('File is beign accesed, Skipping')
+					continue
 				if itemcheck (os.path.dirname(dest)) == '':
 						if args.dummy != True:
 							os.makedirs (os.path.dirname(dest))
