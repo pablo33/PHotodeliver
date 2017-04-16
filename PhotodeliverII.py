@@ -70,7 +70,6 @@ def itemcheck(pointer):
 		return 'link'
 	return ""
 
-
 def to2(month):
 	''' Convert integers into a 2 digit  month string '''
 	if type(month) is not int:
@@ -82,7 +81,6 @@ def to2(month):
 	else:
 		strmonth = "0" + str(month)
 	return strmonth
-
 
 def addslash (text):
 	''' Returns an ending slash in a path if it doesn't have one '''
