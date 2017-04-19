@@ -25,18 +25,18 @@ justif = 20  #  number of characters to justify logging info.
 dupfoldername = 'duplicates'
 
 monthsdict = {
-	"01" : ("enero", "ene"),
-	"02" : ("febrero", "feb"),
-	"03" : ("marzo", "mar"),
-	"04" : ("abril", "abr"),
-	"05" : ("mayo", "may"),
-	"06" : ("junio", "jun"),
-	"07" : ("julio", "jul"),
-	"08" : ("agosto", "ago"),
-	"09" : ("septiembre", "sep"),
-	"10" : ("octubre", "oct"),
-	"11" : ("noviembre", "nov"),
-	"12" : ("diciembre", "dic"),
+	"01" : ("enero", "ene", "juanuary", "jan"),
+	"02" : ("febrero", "feb", "february"),
+	"03" : ("marzo", "mar", "march"),
+	"04" : ("abril", "abr", "april", "apr"),
+	"05" : ("mayo", "may","may"),
+	"06" : ("junio", "jun", "june"),
+	"07" : ("julio", "jul", "july"),
+	"08" : ("agosto", "ago", "agost"),
+	"09" : ("septiembre", "sep", "set","september"),
+	"10" : ("octubre", "oct", "october"),
+	"11" : ("noviembre", "nov", "november"),
+	"12" : ("diciembre", "dic", "december", "dec"),
 	}
 
 # ================================

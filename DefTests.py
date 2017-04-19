@@ -199,6 +199,8 @@ class enclosedmonthfinder (unittest.TestCase):
 		("Febrero", "02"),
 		("MaR", "03"),
 		("dic", "12"),
+		("March", "03"),
+		("Jun", "06"),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
