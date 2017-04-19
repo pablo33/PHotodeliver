@@ -204,18 +204,17 @@ def yearmonthfinder (string):
 	""" Given a string, returns a combo of numeric  year-month if it is found,
 		otherwise returns None .
 		"""
-
-	yearmonthfinder
-	expr = ".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]\d).*"
+	expr = ".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d).*"
 	mo = re.search(expr, string)
 	try:
 		mo.group()
 	except:
 		pass
 	else:
-		if int (mo.group('month')) in range (1,13) :
+		num_month = int(mo.group('month'))
+		if num_month in range (1,13) :
 			fnyear = mo.group ('year')
-			fnmonth = mo.group ('month')
+			fnmonth = '%02.0i'%num_month
 			return fnyear, fnmonth
 	return None, None
 
@@ -224,17 +223,19 @@ def yearmonthdayfinder (string):
 		otherwise returns None.
 		"""
 
-	expr = "(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]\d)[-_ /:.]?(?P<day>[0-3]\d)"
+	expr = "(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
 	mo = re.search(expr, string)
 	try:
 		mo.group()
 	except:
 		pass
 	else:
-		if "00" < mo.group('month') < "13" and "00" < mo.group ('day') < "32":
+		num_month, num_day = int(mo.group('month')), int(mo.group('day'))
+		if num_month < 13 and num_day < 32:
+			print ( "num_month, num_day : ",num_month, num_day)
 			fnyear = mo.group ('year')
-			fnmonth = mo.group ('month')
-			fnday = mo.group ('day')
+			fnmonth = '%02.0i'%num_month
+			fnday = '%02.0i'%num_day
 			return fnyear, fnmonth, fnday
 	return None, None, None
 
@@ -243,7 +244,7 @@ def fulldatefinder (string):
 		if found, otherwise returns None"""
 	start = False
 	sep = '[-_ :.]'
-	expr = '(?P<year>[12]\d{3})%(sep)s?(?P<month>[01]\d)%(sep)s?(?P<day>[0-3]\d)%(sep)s?(?P<hour>[012]\d)%(sep)s?(?P<min>[0-5]\d)%(sep)s?(?P<sec>[0-5]\d)' %{'sep':'[-_ .:]'}
+	expr = '(?P<year>[12]\d{3})%(sep)s?(?P<month>[01]?\d)%(sep)s?(?P<day>[0-3]?\d)%(sep)s?(?P<hour>[012]\d)%(sep)s?(?P<min>[0-5]\d)%(sep)s?(?P<sec>[0-5]\d)' %{'sep':'[-_ .:]'}
 	mo = re.search (expr, string)
 	try:
 		mo.group()
@@ -251,9 +252,10 @@ def fulldatefinder (string):
 		logging.debug ("expression %s Not found in %s" %(expr, string))
 		pass
 	else:
+		num_month, num_day = int(mo.group ('month')), int(mo.group ('day'))
 		year  = mo.group ('year')
-		month = mo.group ('month')
-		day   = mo.group ('day')
+		month = '%02.0i'%num_month
+		day   = '%02.0i'%num_day
 		hour  = mo.group ('hour')
 		minute   = mo.group ('min')
 		sec   = mo.group ('sec')

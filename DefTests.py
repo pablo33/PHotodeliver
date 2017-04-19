@@ -238,7 +238,7 @@ class yearmonthfinder (unittest.TestCase):
 		("2015.01",("2015","01")),
 		("2010X10",(None,None)),
 		("2010",(None,None)),
-		("2010-8",(None,None)),
+		("2010-8",("2010","08")),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
@@ -251,6 +251,9 @@ class yearmonthdayfinder (unittest.TestCase):
 		otherwise returns None. Possible separated chars  -_/ and one space
 		"""
 	known_values = (
+		("2010-8-01",("2010","08","01")),
+		("2007-4-2",("2007","04","02")),
+		("2003-7-20",("2003","07","20")),
 		("2010-08-01",("2010","08","01")),
 		("2010_09-10",("2010","09","10")),
 		("2010 10_25",("2010","10","25")),
@@ -259,7 +262,6 @@ class yearmonthdayfinder (unittest.TestCase):
 		("2015.01:31",("2015","01","31")),
 		("2010X10X03",(None,None,None)),
 		("2010",(None,None,None)),
-		("2010-8-2",(None,None,None)),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
@@ -277,7 +279,9 @@ class fulldatefinder (unittest.TestCase):
 		("20150131_050358",("2015","01","31","05","03","58", True)),
 		("2010X10X03",(None,None,None,None,None,None,None)),
 		("2010/10/1111(a)11",(None,None,None,None,None,None,None)),
-		("2010-8-2-12:03:03",(None,None,None,None,None,None,None)),
+		("2010-8-2-12:03:03",('2010', '08', '02', '12', '03', '03', True)),
+		("2010-08-2-12:03:03",('2010', '08', '02', '12', '03', '03', True)),
+		("2010-8-02-12:03:03",('2010', '08', '02', '12', '03', '03', True)),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
