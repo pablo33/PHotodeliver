@@ -18,10 +18,10 @@ from subprocess import check_output  # Checks if some process is accessing a fil
 
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
-moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']
-photomedia = ['jpg','jpeg','raw','png','bmp']
-wantedmedia =  photomedia + moviesmedia
-justif = 20  #  number of characters to justify logging info.
+moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']  # How to identify movie files
+photomedia = ['jpg','jpeg','raw','png','bmp']  # How to identify image files
+wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
+logjustif = 20  #  number of characters to justify logging info.
 dupfoldername = 'duplicates'
 
 monthsdict = {
@@ -37,7 +37,7 @@ monthsdict = {
 	"10" : ("octubre", "oct", "october"),
 	"11" : ("noviembre", "nov", "november"),
 	"12" : ("diciembre", "dic", "december", "dec"),
-	}
+	}  # Months word dict.
 
 # ================================
 # =========  Utils ===============
@@ -77,11 +77,7 @@ def to2(month):
 		raise NotIntegerError ('Only integers are addmited as input')
 	if not (0 < month < 13):
 		raise OutOfRangeError('Number out of range, must be a month')
-	if month > 9:
-		strmonth = str(month)
-	else:
-		strmonth = "0" + str(month)
-	return strmonth
+	return '{0:02}'.format(month)
 
 def addslash (text):
 	''' Returns an ending slash in a path if it doesn't have one '''
@@ -110,13 +106,13 @@ def addchilddirectory(directorio):
 	""" Returns a list of child directories
 
 	Usage: addchilddirectory(directory with absolute path)"""
-	paraañadir = []
+	addeddirs = []
 	ficheros = os.listdir(directorio)
 	for a in ficheros:
 		item = os.path.join(directorio, a)
 		if os.path.isdir(item):
-			paraañadir.append(item)
-	return paraañadir
+			addeddirs.append(item)
+	return addeddirs
 
 def lsdirectorytree( directory = os.getenv( 'HOME')):
 	""" Returns a list of a directory and its child directories
@@ -214,7 +210,7 @@ def yearmonthfinder (string):
 		num_month = int(mo.group('month'))
 		if num_month in range (1,13) :
 			fnyear = mo.group ('year')
-			fnmonth = '%02.0i'%num_month
+			fnmonth = '{0:02}'.format(num_month)
 			return fnyear, fnmonth
 	return None, None
 
@@ -232,10 +228,10 @@ def yearmonthdayfinder (string):
 	else:
 		num_month, num_day = int(mo.group('month')), int(mo.group('day'))
 		if num_month < 13 and num_day < 32:
-			print ( "num_month, num_day : ",num_month, num_day)
+			#print ( "num_month, num_day : ",num_month, num_day)
 			fnyear = mo.group ('year')
-			fnmonth = '%02.0i'%num_month
-			fnday = '%02.0i'%num_day
+			fnmonth = '{0:02}'.format(num_month)
+			fnday = '{0:02}'.format(num_day)
 			return fnyear, fnmonth, fnday
 	return None, None, None
 
@@ -254,8 +250,8 @@ def fulldatefinder (string):
 	else:
 		num_month, num_day = int(mo.group ('month')), int(mo.group ('day'))
 		year  = mo.group ('year')
-		month = '%02.0i'%num_month
-		day   = '%02.0i'%num_day
+		month = '{0:02}'.format(num_month)
+		day   = '{0:02}'.format(num_day)
 		hour  = mo.group ('hour')
 		minute   = mo.group ('min')
 		sec   = mo.group ('sec')
@@ -278,13 +274,13 @@ def serieserial (string):
 		try:
 			mo.group()
 		except:
-			logging.debug ("expression %s Not found in %s" %(expr, string))
+			logging.debug ("expression {} Not found in {}".format(expr, string))
 			continue
 		else:
-			logging.debug ("expression %s found in %s" %(expr, string))
+			logging.debug ("expression {} found in {}".format(expr, string))
 			imserie  = mo.group ('se')
 			imserial = mo.group ('sn')
-			logging.debug ( 'Item serie and serial number (' + string + '): '+ imserie + ' ' +  imserial)
+			logging.debug ( 'Item serie and serial number ({}): {} {}'.format(string,imserie,imserial))
 			return imserie, imserial
 	return None, None
 
@@ -304,10 +300,10 @@ def Fetchmetadata (imagepath):
 def mediainfo (abspath, forceassignfromfilename):
 
 	#1) Retrieve basic info from the file
-	logging.debug ('## item: '+ abspath)
+	logging.debug ('## item: {}'.format(abspath))
 	filename, fileext = os.path.splitext(os.path.basename (abspath))
 	Statdate = datetime.datetime.utcfromtimestamp(os.path.getmtime (abspath))
-	filebytes = os.path.getsize(abspath)  # logging.debug ('fileTepoch (from Stat): '.ljust( justif ) + str(fileTepoch))
+	filebytes = os.path.getsize(abspath)  # logging.debug ('fileTepoch (from Stat): '.ljust( logjustif ) + str(fileTepoch))
 	fnDateTimeOriginal = None  # From start we assume a no date found on the file path
 
 	#2) Fetch date identificators form imagepath, serie and serial number if any. 
@@ -341,12 +337,12 @@ def mediainfo (abspath, forceassignfromfilename):
 		pathlevels.remove('')
 	logging.debug ('Found directories levels: '+str(pathlevels))
 	# Starting variables. From start, we assume that there is no date at all.
-	fnyear = None
+	fnyear  = None
 	fnmonth = None
-	fnday = '01'
-	fnhour = '12'
-	fnmin = '00'
-	fnsec = '00'
+	fnday   = '01'
+	fnhour  = '12'
+	fnmin   = '00'
+	fnsec   = '00'
 	for word in pathlevels:
 		# C1.1 (/year/)
 		yearfound = enclosedyearfinder (word)
@@ -412,7 +408,7 @@ def mediainfo (abspath, forceassignfromfilename):
 
 	# setting creation date retrieved from filepath
 	if fnyear != None and fnmonth != None:
-		textdate = '%s:%s:%s %s:%s:%s'%(fnyear, fnmonth, fnday, fnhour, fnmin, fnsec)
+		textdate = '{}:{}:{} {}:{}:{}'.format (fnyear, fnmonth, fnday, fnhour, fnmin, fnsec)
 		logging.debug ('This date have been retrieved from the file-path-name: ' + textdate )
 		fnDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
 
@@ -497,10 +493,10 @@ def mediascan(location):
 				for a in itemlist:
 					if ignoreTrash == True : 
 						if a.find ('.Trash') != -1 :
-							logging.debug ('Item %s was not included (Trash folder)' %(a) )
+							logging.debug ('Item {} was not included (Trash folder)'.format(a) )
 							continue
 						if a.find ('.thumbnails') != -1 :
-							logging.debug ('Item %s was not included (Thumbnails folder)' %(a) )
+							logging.debug ('Item {} was not included (Thumbnails folder)'.format(a) )
 							continue
 					mediaadd (a)  # Add item's info to DB
 					nfilesscanned += 1
@@ -511,27 +507,27 @@ def mediascan(location):
 def showgeneralinfo():
 	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Metadata'")
 	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files already had metadata and will preserve it.'
+	msg = '{} files already had metadata and will preserve it.'.format(str(nfiles))
 	print (msg); logging.info (msg)
 
 	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is NULL")
 	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files have not date metadata and a date have been retrieved from the filename or path.'
+	msg = '{} files have not date metadata and a date have been retrieved from the filename or path.'.format(str(nfiles))
 	print (msg); logging.info (msg)
 
 	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Filepath' and Exifdate is not NULL")
 	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files have a date metadata but a date have been retrieved from the filename or the path and it will rewritted (-faff option has been activated).'
+	msg = '{} files have a date metadata but a date have been retrieved from the filename or the path and it will rewritted (-faff option has been activated).'.format(str(nfiles))
 	print (msg); logging.info (msg)
 
 	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag = 'Stat'")
 	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames, and their date of creation will be assigned from the file creation date (Stat).'
+	msg = '{} files does not have date metadata, is also was not possible to find a date on their paths or filenames, and their date of creation will be assigned from the file creation date (Stat).'.format(str(nfiles))
 	print (msg); logging.info (msg)
 
 	cursor.execute ("SELECT count (Fullfilepath) FROM files WHERE Decideflag is NULL ")
 	nfiles = ((cursor.fetchone())[0])
-	msg = str(nfiles) + ' files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date as date of creation.'
+	msg = '{} files does not have date metadata, is also was not possible to find a date on their paths or filenames. Place "DCIM" as part of the folder or file name at any level if you want to assign the filesystem date as date of creation.'.format(str(nfiles))
 	print (msg); logging.info (msg)
 	return
 
@@ -562,7 +558,7 @@ def fileinuse (entry):
 		pids = check_output(["lsof", '-t', entry ])
 	except:
 		return False
-	logging.debug('%s is beign accesed'%(entry))
+	logging.debug('{} is beign accesed'.format(entry))
 	return True
 
 # # # # # Main # # # #  #
@@ -589,8 +585,8 @@ if __name__ == "__main__":
 # This options can be overriden by entering a command line options
 # This is a python file. Be careful and see the sintaxt.
 
-originlocations = '%(home)s/originlocation'  #  Path or list of paths from where retrieve new images.
-destlocation = '%(home)s/destlocation'  # 'Path to where you want to store your photos'
+originlocations = '{home}/originlocation'  #  Path or list of paths from where retrieve new images.
+destlocation = '{home}/destlocation'  # 'Path to where you want to store your photos'
 renamemovies = True  # This option adds a creation date in movies file-names (wich doesn't have Exif Metadata)
 renamephotos = True  # This option adds a creation date in media file-names (useful if you want to modify them)
 eventminpictures = 8  # Minimum number of pictures to assign a day-event
@@ -606,7 +602,7 @@ storefilemetadata = True  # True means that guesed date of creation will be stor
 convert = True  # True / False ......  Try to convert image formats in JPG
 centinelmode = False  # True / False ......  True means that the routine keeps resident in memory, it loops every centinelsecondssleep
 centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iteration.
-'''%{'home':os.getenv('HOME')}
+'''.format(home = os.getenv('HOME'))
 		)
 		f.close()
 		print ("An user config file has been created at:", userfileconfig)
@@ -825,7 +821,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 			print ('Origin location have not been entered, this will reagroup destlocation items.')
 			logging.info ('No origin location entered: Reagrouping existent pictures')
 			if centinelmode:
-				print ('Centinelmode is active, this will keep reagrouping the same dest folder every %s seconds'%centinelsecondssleep)
+				print ('Centinelmode is active, this will keep reagrouping the same dest folder every {} seconds'.format(centinelsecondssleep))
 				logging.info ('Centinelmode is active and Moveexistentfiles is also Active: Reagrouping existent destination pictures forever.')
 		else:
 			errmsgs.append ('No origin location was introduced, and you do not want to reagroup existent items.')
@@ -923,7 +919,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 
 	# adding to log file Running parameters
 	for a in parametersdyct:
-		text = a + " = "+ str(parametersdyct[a]) + " \t (from args:"+ str(eval ("args." + a)) + ") \t (At config file: "+ str(eval ("Photodelivercfg." + a))+ ")"
+		text = "{0} = {1} \t (from args:{2}) \t (At config file: {3})".format (a, parametersdyct[a], eval ("args." + a), eval ("Photodelivercfg." + a))
 		logging.info (text)
 		if args.showconfig :
 			print (text+ "\n")
@@ -1039,7 +1035,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 					else:
 						logging.debug ('this picture is not part of an event with the preceding one')
 						eventID += 1
-					con.execute ("UPDATE files set EventID=%s where Fullfilepath = '%s'" %(eventID, Fullfilepath1))
+					con.execute ("UPDATE files set EventID={} where Fullfilepath = '{}'".format (eventID, Fullfilepath1))
 
 					TimeOriginal0 = TimeOriginal1
 					Fullfilepath0 = Fullfilepath1
@@ -1049,13 +1045,13 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 				#2.2) Inform de date of the event. (The minimun date)
 				for i in range (0,eventID+1):
 					# count number of files in that event: 
-					cursor.execute ('SELECT count (Fullfilepath), MIN (Timeoriginal) FROM files where EventID = %s' %(i))
+					cursor.execute ('SELECT count (Fullfilepath), MIN (Timeoriginal) FROM files where EventID = {}'.format (i))
 					nfiles, eventdate = cursor.fetchone()
 					#print (i, nfiles, eventdate)
 					# Set event date if it has the minimun number required.
 					if nfiles >= eventminpictures:
 						print ('')
-						con.execute ("UPDATE files set Eventdate='%s' where EventID = %s" %(eventdate ,i))
+						con.execute ("UPDATE files set Eventdate='{}' where EventID = {}".format (eventdate ,i))
 				con.commit()
 
 
@@ -1079,15 +1075,15 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 				# 3.2) item's fullpath and filename
 				if preservealbums == True and a.find ('_/') != -1 :
 					if a.startswith (destlocation) :
-						logging.debug ('Item %s was not included (Preserving album folder at destination location).' %(a) )
+						logging.debug ('Item {} was not included (Preserving album folder at destination location).'.format (a) )
 					else:
-						logging.debug ('Moving item %s to destination preserving its path (is part of an album).' %(a) )
+						logging.debug ('Moving item {} to destination preserving its path (is part of an album).'.format (a) )
 						dest = os.path.join(destlocation, a.replace(originlocation,''))
 					continue
 
 				else:
 					if Timeoriginal == None:
-						logging.debug ('Moving item %s to nodate folder (it has no date).' %(a) )			
+						logging.debug ('Moving item {} to nodate folder (it has no date).'.format (a) )			
 						if a.startswith(os.path.join(destlocation,"nodate")):
 							dest = a
 						else:
@@ -1100,7 +1096,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						eventname = findeventname (Abranch)
 						if eventname != '':
 							eventnameflag = True
-							logging.debug( 'found an origin event name in: %s (%s)' %(a, eventname))
+							logging.debug( 'found an origin event name in: {} ({})'.format (a, eventname))
 
 						# Getting a possible event day
 						# deliver
@@ -1154,7 +1150,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 								dest = os.path.join (originlocation,dupfoldername, a.replace(originlocation,''))
 								continue
 
-				con.execute ("UPDATE files set Targetfilepath = '%s', Convertfileflag = '%s' where Fullfilepath = '%s'" %(dest ,convertfileflag, a))
+				con.execute ("UPDATE files set Targetfilepath = '{}', Convertfileflag = '{}' where Fullfilepath = '{}'".format (dest ,convertfileflag, a))
 			con.commit()
 
 			# 4) Perform file operations
@@ -1213,7 +1209,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 				foldercollectionnext = set()
 				while len(foldercollection) > 0:
 					for i in foldercollection:
-						logging.info ('checking: %s' %i)
+						logging.info ('checking: {}'.format (i))
 						if itemcheck(i) != 'folder':
 							logging.warning ('\tDoes not exists or is not a folder. Skipping')
 							continue			
@@ -1232,8 +1228,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 
 		##) Sleeping and iterating in case of centinelmode
 		if centinelmode:
-			print ('\nsleeping %s seconds\n'%centinelsecondssleep)
+			print ('\nsleeping {} seconds\n'.format(centinelsecondssleep))
 			time.sleep(centinelsecondssleep)
 		else:
 			break
-
