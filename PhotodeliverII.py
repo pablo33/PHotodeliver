@@ -378,16 +378,6 @@ def mediainfo (abspath, forceassignfromfilename):
 				fnday = dayfound
 
 
-	# C3.2 (Year-month in filename)
-	if fnyear == None and fnmonth == None:
-		yearfound, monthfound = yearmonthfinder (filename)
-		if yearfound != None:
-			if mintepoch < yearfound < "2038":
-				fnyear = yearfound
-				fnmonth = monthfound
-				logging.debug('month and day found in C3.2 {}-{}'.format(fnyear,fnmonth))
-		
-
 	# C4: YYYY-MM-DD  in filename
 	yearfound, monthfound, dayfound = yearmonthdayfinder (filename)
 	if yearfound != None:
@@ -397,6 +387,14 @@ def mediainfo (abspath, forceassignfromfilename):
 			fnday = dayfound
 			logging.debug('month and day found in C4 {}-{}-{}'.format(fnyear,fnmonth,fnday))
 
+	# C3.2 (Year-month in filename)
+	if fnyear == None and fnmonth == None:
+		yearfound, monthfound = yearmonthfinder (filename)
+		if yearfound != None:
+			if mintepoch < yearfound < "2038":
+				fnyear = yearfound
+				fnmonth = monthfound
+				logging.debug('month and day found in C3.2 {}-{}'.format(fnyear,fnmonth))
 
 	# C5: YYYYMMDD-HHMMSS  in filename and find a starting full-date identifier
 	Imdatestart = False  # Flag to inform a starting full-date-identifier at the start of the file.
