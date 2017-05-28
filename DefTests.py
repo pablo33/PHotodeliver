@@ -207,7 +207,6 @@ class enclosedmonthfinder (unittest.TestCase):
 			result = PhotodeliverII.enclosedmonthfinder (string1)
 			self.assertEqual (match, result)
 
-
 class encloseddayfinder (unittest.TestCase):
 	""" Give a string, it returns a string if it is a month number with 2 digits,
 		otherwise it returns None, it also returns a digit mont if it is a text month
@@ -223,7 +222,6 @@ class encloseddayfinder (unittest.TestCase):
 		for string1, match in self.known_values:
 			result = PhotodeliverII.encloseddayfinder (string1)
 			self.assertEqual (match, result)
-
 
 class yearmonthfinder (unittest.TestCase):
 	""" Given a string, returns a combo of numeric  year-month if it is found
@@ -245,7 +243,6 @@ class yearmonthfinder (unittest.TestCase):
 			result = PhotodeliverII.yearmonthfinder (string1)
 			self.assertEqual (match, result)
 
-
 class yearmonthdayfinder (unittest.TestCase):
 	""" Given a string, returns a combo of numeric  year-month-day if it is found,
 		otherwise returns None. Possible separated chars  -_/ and one space
@@ -261,13 +258,13 @@ class yearmonthdayfinder (unittest.TestCase):
 		("2015:01.31",("2015","01","31")),
 		("2015.01:31",("2015","01","31")),
 		("2010X10X03",(None,None,None)),
+		("1993-06 some text",(None,None,None)),
 		("2010",(None,None,None)),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
 			result = PhotodeliverII.yearmonthdayfinder (string1)
 			self.assertEqual (match, result)
-
 
 class fulldatefinder (unittest.TestCase):
 	known_values = (
@@ -288,7 +285,6 @@ class fulldatefinder (unittest.TestCase):
 			result = PhotodeliverII.fulldatefinder (string1)
 			self.assertEqual (match, result)
 
-
 class serieserial (unittest.TestCase):
 	known_values = (
 		("WA-1234", ('WA-','1234')),
@@ -305,7 +301,6 @@ class serieserial (unittest.TestCase):
 		for string1, match in self.known_values:
 			result = PhotodeliverII.serieserial (string1)
 			self.assertEqual (match, result)
-
 
 class Fetchmetadata(unittest.TestCase):
 	""" Given an imagepath, it returns a tuple with 3 values:
@@ -382,7 +377,6 @@ class mediainfo (unittest.TestCase):
 		for string1, match in self.known_values:
 			result = PhotodeliverII.mediainfo (string1, False)
 			self.assertEqual (match, result)
-
 
 class findeventname (unittest.TestCase):
 	""" Given a text, it returns a possible event name:

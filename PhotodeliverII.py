@@ -219,17 +219,15 @@ def yearmonthdayfinder (string):
 		otherwise returns None.
 		"""
 
-	expr = "(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
+	expr = "^(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
 	mo = re.search(expr, string)
 	try:
 		mo.group()
 	except:
 		pass
 	else:
-		num_month, num_day = int(mo.group('month')), int(mo.group('day'))
-		if num_month < 13 and num_day < 32:
-			#print ( "num_month, num_day : ",num_month, num_day)
-			fnyear = mo.group ('year')
+		fnyear, num_month, num_day = mo.group ('year'), int(mo.group('month')), int(mo.group('day'))
+		if 0 < num_month < 13 and 0 < num_day < 32:
 			fnmonth = '{0:02}'.format(num_month)
 			fnday = '{0:02}'.format(num_day)
 			return fnyear, fnmonth, fnday
@@ -369,6 +367,7 @@ def mediainfo (abspath, forceassignfromfilename):
 			if mintepoch < yearfound < "2038":
 				fnyear = yearfound
 				fnmonth = monthfound
+				logging.debug('month and day found in C2.1 {}-{}'.format(fnyear,fnmonth))
 
 		# C3.1: (Year-month-day)
 		yearfound, monthfound, dayfound = yearmonthdayfinder (word)
@@ -378,7 +377,17 @@ def mediainfo (abspath, forceassignfromfilename):
 				fnmonth = monthfound
 				fnday = dayfound
 
+
+	# C3.2 (Year-month in filename)
+	if fnyear == None and fnmonth == None:
+		yearfound, monthfound = yearmonthfinder (filename)
+		if yearfound != None:
+			if mintepoch < yearfound < "2038":
+				fnyear = yearfound
+				fnmonth = monthfound
+				logging.debug('month and day found in C3.2 {}-{}'.format(fnyear,fnmonth))
 		
+
 	# C4: YYYY-MM-DD  in filename
 	yearfound, monthfound, dayfound = yearmonthdayfinder (filename)
 	if yearfound != None:
@@ -386,6 +395,8 @@ def mediainfo (abspath, forceassignfromfilename):
 			fnyear = yearfound
 			fnmonth = monthfound
 			fnday = dayfound
+			logging.debug('month and day found in C4 {}-{}-{}'.format(fnyear,fnmonth,fnday))
+
 
 	# C5: YYYYMMDD-HHMMSS  in filename and find a starting full-date identifier
 	Imdatestart = False  # Flag to inform a starting full-date-identifier at the start of the file.
@@ -1128,7 +1139,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
 				# 3.4) Set convert flag
 				convertfileflag = False
-				if convert == True and fileext.lower() in ['.png','.bmp',]:
+				if convert == True and fileext.lower() in ['.png','.bmp']:
 					dest = os.path.splitext(dest)[0]+".jpg"
 					convertfileflag = True
 					logging.info ('Convertfileflag =' + str(convertfileflag))
