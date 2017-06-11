@@ -260,6 +260,7 @@ class yearmonthdayfinder (unittest.TestCase):
 		("2010X10X03",(None,None,None)),
 		("1993-06 some text",(None,None,None)),
 		("2010",(None,None,None)),
+		("IMG-20170610-WA0014",("2017","06","10")),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
@@ -287,6 +288,7 @@ class fulldatefinder (unittest.TestCase):
 
 class serieserial (unittest.TestCase):
 	known_values = (
+		("WA1234", ('WA','1234')),
 		("WA-1234", ('WA-','1234')),
 		("WA_3456", ('WA_','3456')),
 		("WA 1111", ('WA ','1111')),
@@ -296,6 +298,7 @@ class serieserial (unittest.TestCase):
 		("beforePICT-0001ending", ('PICT-','0001')),
 		("MVI5005", ('MVI','5005')),
 		("img_1771", ('img_','1771')),
+		("IMG-20170610-WA0014",('WA', '0014')),
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:

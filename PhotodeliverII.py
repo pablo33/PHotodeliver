@@ -219,7 +219,7 @@ def yearmonthdayfinder (string):
 		otherwise returns None.
 		"""
 
-	expr = "^(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
+	expr = "(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
 	mo = re.search(expr, string)
 	try:
 		mo.group()
