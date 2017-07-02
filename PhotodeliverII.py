@@ -510,7 +510,7 @@ def mediascan(location):
 					mediaadd (a)  # Add item's info to DB
 					nfilesscanned += 1
 	msg = str(nfilesscanned) + ' files where fetched at ' + location
-	print (msg); logging.info (msg)
+	print (msg); logging.debug (msg)
 	return nfilesscanned
 
 def showgeneralinfo():
@@ -1168,9 +1168,9 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 			for i in cursor:
 				a, dest, fileext, Timeoriginal, decideflag, convertfileflag = i
 				convertfileflag = eval (convertfileflag)
-				logging.info ('')
-				logging.info ('Processing:')
-				logging.info (a)
+				logging.debug ('')
+				logging.debug ('Processing:')
+				logging.debug (a)
 				if fileinuse (a):
 					logging.warning ('File is beign accesed, Skipping')
 					continue
@@ -1187,16 +1187,16 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 					if copymode == 'm':
 						if args.dummy != True:
 							os.remove (a)
-						logging.info ('\t origin file successfully deleted after conversion.')
+						logging.debug ('\t origin file successfully deleted after conversion.')
 				elif a != dest:
 					if copymode == 'm':
 						if args.dummy != True:
 							shutil.move (a, dest)
-						logging.info ('\t file successfully moved into destination.')
+						logging.debug ('\t file successfully moved into destination.')
 					else:	
 						if args.dummy != True:
 							shutil.copy (a, dest)
-						logging.info ('\t file successfully copied into destination.')
+						logging.debug ('\t file successfully copied into destination.')
 
 				if cleaning == True and copymode == 'm':
 					foldercollection.add (os.path.dirname(a))
@@ -1208,8 +1208,8 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
 						metadata.set_date_time(itemcreation)
 						metadata.save_file()
-					logging.info ('\t' + 'writed metadata to image file.')
-				logging.info ('\t' + dest)
+					logging.debug ('\t' + 'writed metadata to image file.')
+				logging.debug ('\t' + dest)
 
 			#4) Cleaning empty directories
 			if cleaning == True:
@@ -1218,14 +1218,14 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 				foldercollectionnext = set()
 				while len(foldercollection) > 0:
 					for i in foldercollection:
-						logging.info ('checking: {}'.format (i))
+						logging.debug ('checking: {}'.format (i))
 						if itemcheck(i) != 'folder':
 							logging.warning ('\tDoes not exists or is not a folder. Skipping')
 							continue			
 						if len (os.listdir(i)) == 0 and i not in {originlocation[:-1], destlocation[:-1]}:
 							if args.dummy != True:
 								shutil.rmtree (i)
-							logging.info ('\tfolder has been removed. (was empty)')
+							logging.debug ('\tfolder has been removed. (was empty)')
 							foldercollectionnext.add (os.path.dirname(i))
 							logging.debug ('\tadded next level to re-scan')
 					foldercollection = foldercollectionnext
