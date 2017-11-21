@@ -305,7 +305,7 @@ def mediainfo (abspath, forceassignfromfilename):
 	fnDateTimeOriginal = None  # From start we assume a no date found on the file path
 
 	#2) Fetch date identificators form imagepath, serie and serial number if any. 
-	mintepoch = '1899'  # In order to discard low year values, this is the lowest year. 
+	mintepoch = '1800'  # In order to discard low year values, this is the lowest year. 
 
 	# Try to find some date structure in folder paths. (abspath)
 	''' Fetch dates from folder structure, this prevents losing information if exif metadata 
