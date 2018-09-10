@@ -507,6 +507,7 @@ def mediascan(location):
 						if a.find ('.thumbnails') != -1 :
 							logging.debug ('Item {} was not included (Thumbnails folder)'.format(a) )
 							continue
+					logging.info ('Adding file to process: {}'.format(a))
 					mediaadd (a)  # Add item's info to DB
 					nfilesscanned += 1
 	msg = str(nfilesscanned) + ' files where fetched at ' + location
