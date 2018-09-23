@@ -18,7 +18,7 @@ from subprocess import check_output  # Checks if some process is accessing a fil
 
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
-moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4']  # How to identify movie files
+moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4', 'mts']  # How to identify movie files
 photomedia = ['jpg','jpeg','raw','png','bmp']  # How to identify image files
 wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
 logjustif = 20  #  number of characters to justify logging info.
@@ -1209,9 +1209,11 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 					if convertfileflag == True:
 						logging.info ("\t Converting to .jpg")
 						picture = Image.open (a)
+						cpicture = picture.convert('RGB')  # This eliminates png transparency
 						if args.dummy != True:
-							picture.save (dest)
-						#picture.close()  # commented for ubuntu 14.10 comtabilitiy
+							cpicture.save (dest)
+						picture.close()  # commented for ubuntu 14.10 comtabilitiy
+						cpicture.close()  # 
 						if copymode == 'm':
 							if args.dummy != True:
 								os.remove (a)
