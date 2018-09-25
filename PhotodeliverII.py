@@ -1212,8 +1212,8 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						cpicture = picture.convert('RGB')  # This eliminates png transparency
 						if args.dummy != True:
 							cpicture.save (dest)
-						picture.close()  # commented for ubuntu 14.10 comtabilitiy
-						cpicture.close()  # 
+						#picture.close()  # commented for ubuntu 14.10 comtabilitiy
+						#cpicture.close()  # 
 						if copymode == 'm':
 							if args.dummy != True:
 								os.remove (a)
