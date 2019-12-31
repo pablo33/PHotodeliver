@@ -633,7 +633,7 @@ preservealbums = True  #  True / False  .... Do not include in fileScanning albu
 forceassignfromfilename = False  # True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
 cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
 storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
-convert = True  # True / False ......  Try to convert image formats in JPG
+convert = True # True / False ...... Try to convert image formats in JPG. Only bmp, png and heic images. You'll need to put the tifig executable at your ~./Photodeliver user directory and make sure you add permissions to execute the binary.
 centinelmode = False  # True / False ......  True means that the routine keeps resident in memory, it loops every centinelsecondssleep
 centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iteration.
 '''.format(home = os.getenv('HOME'))
@@ -931,7 +931,11 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 	if type (convert) is not bool :
 		errmsgs.append ('\nconvert parameter can only be True or False:\n-conv\t' + str(convert))
 		logging.critical('convert parameter is not True nor False')
-
+	elif convert:
+		if itemcheck (os.path.join(userpath,'tifig')) != 'file':
+			warningmsg = 'no tifig binary found at {}. I will not perform heic image conversions'.format (userpath)
+			print ('Warning:', warningmsg)
+			logging.warning (warningmsg)
 	#-sm
 	if type (centinelmode) is not bool :
 		errmsgs.append ('\ncentinelmode parameter can only be True or False:\n-sm\t' + str(centinelmode))
@@ -965,7 +969,6 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 	if args.showconfig :
 		print ("exitting...")
 		exit()
-
 
 	# ===========================================
 	# ========= Main module =====================
@@ -1208,17 +1211,22 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 					# Convert to JPG Option
 					if convertfileflag == True:
 						logging.info ("\t Converting to .jpg")
+						success = 100
 						if fileext.lower() in ['.png', '.bmp']:
 							picture = Image.open (a)
 							cpicture = picture.convert('RGB')  # This eliminates png transparency
 							if args.dummy != True:
 								cpicture.save (dest)
+								success = 0
 							#picture.close()  # commented for ubuntu 14.10 compatibility
 							#cpicture.close()  #
 						elif fileext.lower() in ['.heic',]:
 							if args.dummy != True:
-								os.system ('{}/tifig --input "{}" --output "{}"'.format(userpath,a,dest))
-						if copymode == 'm':
+								try:
+									success = os.system ('{}/tifig --input "{}" --output "{}"'.format(userpath,a,dest))
+								except:
+									print ('something were wrong with tifig and the file conversion of {}'.format (a))
+						if copymode == 'm' and success == 0:
 							if args.dummy != True:
 								os.remove (a)
 							logging.debug ('\t origin file successfully deleted after conversion.')
