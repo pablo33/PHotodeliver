@@ -19,7 +19,7 @@ from subprocess import check_output  # Checks if some process is accessing a fil
 # Internal variables.
 os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4', 'mts']  # How to identify movie files
-photomedia = ['jpg','jpeg','raw','png','bmp']  # How to identify image files
+photomedia = ['jpg','jpeg','raw','png','bmp','heic']  # How to identify image files
 wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
 logjustif = 20  #  number of characters to justify logging info.
 dupfoldername = 'duplicates'
@@ -1165,7 +1165,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 							dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
 					# 3.4) Set convert flag
 					convertfileflag = False
-					if convert == True and fileext.lower() in ['.png','.bmp']:
+					if convert == True and fileext.lower() in ['.png', '.bmp', '.heic']:
 						dest = os.path.splitext(dest)[0]+".jpg"
 						convertfileflag = True
 						logging.info ('Convertfileflag =' + str(convertfileflag))
@@ -1208,12 +1208,16 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 					# Convert to JPG Option
 					if convertfileflag == True:
 						logging.info ("\t Converting to .jpg")
-						picture = Image.open (a)
-						cpicture = picture.convert('RGB')  # This eliminates png transparency
-						if args.dummy != True:
-							cpicture.save (dest)
-						#picture.close()  # commented for ubuntu 14.10 comtabilitiy
-						#cpicture.close()  # 
+						if fileext.lower() in ['.png', '.bmp']:
+							picture = Image.open (a)
+							cpicture = picture.convert('RGB')  # This eliminates png transparency
+							if args.dummy != True:
+								cpicture.save (dest)
+							#picture.close()  # commented for ubuntu 14.10 compatibility
+							#cpicture.close()  #
+						elif fileext.lower() in ['.heic',]:
+							if args.dummy != True:
+								os.system ('{}/tifig --input {} --output {}'.format(userpath,a,dest))
 						if copymode == 'm':
 							if args.dummy != True:
 								os.remove (a)
@@ -1223,7 +1227,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 							if args.dummy != True:
 								shutil.move (a, dest)
 							logging.debug ('\t file successfully moved into destination.')
-						else:	
+						else:
 							if args.dummy != True:
 								shutil.copy (a, dest)
 							logging.debug ('\t file successfully copied into destination.')
