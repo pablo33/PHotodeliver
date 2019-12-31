@@ -1217,7 +1217,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 							#cpicture.close()  #
 						elif fileext.lower() in ['.heic',]:
 							if args.dummy != True:
-								os.system ('{}/tifig --input {} --output {}'.format(userpath,a,dest))
+								os.system ('{}/tifig --input "{}" --output "{}"'.format(userpath,a,dest))
 						if copymode == 'm':
 							if args.dummy != True:
 								os.remove (a)
@@ -1236,7 +1236,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						foldercollection.add (os.path.dirname(a))
 
 					# Write metadata into the file-archive
-					if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat']:
+					if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat'] and fileext.lower() not in ['.heic',]:
 						if args.dummy != True:
 							metadata = GExiv2.Metadata(dest)
 							itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
