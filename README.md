@@ -5,7 +5,7 @@ Script for automatic date image metadatation and grouping by day event.
 
 - Group image files by date/events.
 - Inserts image's date metadata by retrieving it from the path/filename, or by the file-creation date.
-- Convert png files into jpg.
+- Convert png, bmp, heic files into jpg.
 - Keepit running in memory and configure hotfolders to retrieve images.
 
 Use it to:  
@@ -24,3 +24,4 @@ Dependencies:
 needs at least ubuntu 14.04  
 Gexiv2  #  For metadata handling.  
 python3-pil  #  For image conversion.  
+tifig  # for heic image conversion.
