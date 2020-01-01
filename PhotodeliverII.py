@@ -200,19 +200,21 @@ def yearmonthfinder (string):
 	""" Given a string, returns a combo of numeric  year-month if it is found,
 		otherwise returns None .
 		"""
-	expr = ".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d).*"
-	mo = re.search(expr, string)
-	try:
-		mo.group()
-	except:
-		pass
-	else:
-		num_month = int(mo.group('month'))
-		if num_month in range (1,13) :
-			fnyear = mo.group ('year')
-			fnmonth = '{0:02}'.format(num_month)
-			return fnyear, fnmonth
-	return None, None
+	fy, fm = None, None
+	for ccrop in range (len (string)+1):
+		expr = ".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d).*"
+		mo = re.search(expr, string[-ccrop:-ccrop+7])
+		try:
+			mo.group()
+		except:
+			pass
+		else:
+			num_month = int(mo.group('month'))
+			if num_month in range (1,13) :
+				fnyear = mo.group ('year')
+				fnmonth = '{0:02}'.format(num_month)
+				fy, fm = fnyear, fnmonth
+	return fy, fm
 
 def yearmonthdayfinder (string):
 	""" Given a string, returns a combo of numeric  year-month-day if it is found,

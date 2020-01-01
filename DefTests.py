@@ -237,6 +237,7 @@ class yearmonthfinder (unittest.TestCase):
 		("2010X10",(None,None)),
 		("2010",(None,None)),
 		("2010-8",("2010","08")),
+		("IMG-20190704-16-34WA0006.jpg",("2019","07"))
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
@@ -261,6 +262,7 @@ class yearmonthdayfinder (unittest.TestCase):
 		("1993-06 some text",(None,None,None)),
 		("2010",(None,None,None)),
 		("IMG-20170610-WA0014",("2017","06","10")),
+		("IMG-20190704-16-34WA0006",("2019","07","04"))
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
