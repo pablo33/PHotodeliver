@@ -17,7 +17,7 @@ from PIL import Image  # for image conversion
 from subprocess import check_output  # Checks if some process is accessing a file
 
 # Internal variables.
-os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
+# os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4', 'mts']  # How to identify movie files
 photomedia = ['jpg','jpeg','raw','png','bmp','heic']  # How to identify image files
 wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
