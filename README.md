@@ -24,4 +24,8 @@ Dependencies:
 needs at least ubuntu 14.04  
 Gexiv2  #  For metadata handling.  
 python3-pil  #  For image conversion.  
-tifig  # for heic image conversion.
+tifig  # for heic image conversion.  
+  
+You can install Gexiv2 typing: 
+
+    sudo apt-get install gir1.2-gexiv2-0.10  

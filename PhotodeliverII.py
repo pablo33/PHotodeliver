@@ -17,7 +17,7 @@ from PIL import Image  # for image conversion
 from subprocess import check_output  # Checks if some process is accessing a file
 
 # Internal variables.
-os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
+# os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4', 'mts']  # How to identify movie files
 photomedia = ['jpg','jpeg','raw','png','bmp','heic']  # How to identify image files
 wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
@@ -847,6 +847,11 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 	# Check inconsistences
 	errmsgs = []
 
+	#-sm
+	if type (centinelmode) is not bool :
+		errmsgs.append ('\ncentinelmode parameter can only be True or False:\n-sm\t' + str(centinelmode))
+		logging.critical('centinelmode parameter is not True nor False')
+
 	#-ol
 	if originlocations != '':
 		if type (originlocations) == str:
@@ -865,8 +870,9 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 			
 	#-dl
 	if itemcheck(destlocation) != 'folder':
-		errmsgs.append ('\nDestination folder does not exist:\n-dl\t' + str(destlocation))
-		logging.critical('Source folder does not exist')
+		if not centinelmode:
+			errmsgs.append ('\nDestination folder does not exist:\n-dl\t' + str(destlocation))
+		logging.critical('Destionation folder does not exist')
 	destlocation = addslash (destlocation)
 	 
 	#-rm
@@ -938,10 +944,6 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 			warningmsg = 'no tifig binary found at {}. I will not perform heic image conversions'.format (userpath)
 			print ('Warning:', warningmsg)
 			logging.warning (warningmsg)
-	#-sm
-	if type (centinelmode) is not bool :
-		errmsgs.append ('\ncentinelmode parameter can only be True or False:\n-sm\t' + str(centinelmode))
-		logging.critical('centinelmode parameter is not True nor False')
 
 	#-ssec
 	if type(centinelsecondssleep) is not int :
@@ -979,6 +981,9 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 	while True:
 		if getappstatus (['shotwell',]):
 			logging.info ('Shotwell process is alive. Skipping.')
+		elif itemcheck(destlocation) != 'folder':
+			print (f'Warning: Destination folder does not exist, so nothing to do for now: {destlocation}')
+			logging.warning (f'Destination folder does not exist: {destlocation}')
 		else:
 			for originlocation in originlocations:
 				if originlocation != '':
