@@ -1,8 +1,19 @@
 #!/usr/bin/python3
+__autor__ = "pablo33"
+__version__ = "2.1"
+__doc__ = """
+This script is intended to pre-proccess video and image files before
+you import them to your photo/video managing software.
+It moves camera file-media from one source folder to a target  on our hard disk.
+it will scan for image time metadata and retrieve it from the filename if needed, 
+it will group files in folders due to its date of creation, 
+manages duplicated files (same name and bytes),
+it will not run if shotwell aplication is running,
+ir will convert heic images to .jpg images,
+as an option, it will append a .jpg extension to .insp files (insta x4 360 photos) so you can manage them with your photo software.
 
-''' This script moves camera file-media to a folder on our hard disk.
-	it will group files in foldes due to its date of creation 
-	it also manages duplicated files (same name and bytes)'''
+see this script at https://github.com/pablo33/PHotodeliver
+	"""
 
 # Module import
 import sys, os, shutil, logging, datetime, time, re
@@ -19,10 +30,10 @@ from subprocess import check_output  # Checks if some process is accessing a fil
 # Internal variables.
 # os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4', 'mts']  # How to identify movie files
-photomedia = ['jpg','jpeg','raw','png','bmp','heic']  # How to identify image files
+photomedia = ['jpg','jpeg','raw','png','bmp','heic', 'insp']  # How to identify image files
 wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
-logjustif = 20  #  number of characters to justify logging info.
-dupfoldername = 'duplicates'
+logjustif = 20  				#  number of characters to justify logging info.
+dupfoldername = 'duplicates'	# folder name to store found ducplicated files
 
 monthsdict = {
 	"01" : ("enero", "ene", "juanuary", "jan"),
@@ -37,7 +48,7 @@ monthsdict = {
 	"10" : ("octubre", "oct", "october"),
 	"11" : ("noviembre", "nov", "november"),
 	"12" : ("diciembre", "dic", "december", "dec"),
-	}  # Months word dict.
+	}  # Months word dict, add more wordings as required
 
 # ================================
 # =========  Utils ===============
@@ -431,7 +442,7 @@ def mediainfo (abspath, forceassignfromfilename):
 	# Fetch image metadata: ImageModel, ImageMake and Image date of creation
 	textdate = None
 	MetaDateTimeOriginal = None
-	if fileext.lower() in ['.jpg', '.jpeg', '.raw', '.png']:
+	if fileext.lower() in ['.jpg', '.jpeg', '.raw', '.png', '.insp']:
 		ImageMake, ImageModel, textdate = Fetchmetadata (abspath)
 		if textdate != None: 
 			MetaDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
@@ -510,7 +521,7 @@ def mediascan(location):
 							logging.debug ('Item {} was not included (Thumbnails folder)'.format(a) )
 							continue
 					logging.info ('Adding file to process: {}'.format(a))
-					mediaadd (a)  # Add item's info to DB
+					mediaadd (a)  # Adds item's info to DB
 					nfilesscanned += 1
 	msg = str(nfilesscanned) + ' files where fetched at ' + location
 	print (msg); logging.debug (msg)
@@ -635,7 +646,7 @@ preservealbums = True  #  True / False  .... Do not include in fileScanning albu
 forceassignfromfilename = False  # True / False   .... Force assign from a date found from filename if any. (This allows to override EXIF assignation if it is found).
 cleaning = True  # True / False .....  Cleans empty folders (only folders that had contained photos)
 storefilemetadata = True  # True means that guesed date of creation will be stored in the file-archive as EXIF metadata.
-convert = True # True / False ...... Try to convert image formats in JPG. Only bmp, png and heic images. You'll need to put the tifig executable at your ~./Photodeliver user directory and make sure you add permissions to execute the binary.
+convert = True # True / False ...... Try to convert image formats in JPG. Only bmp, png and heic images. You'll need to put the tifig executable at your ~./Photodeliver user directory and make sure you add permissions to execute the binary. For .insp images, the script just adds a .jpg at the end of the name.
 centinelmode = False  # True / False ......  True means that the routine keeps resident in memory, it loops every centinelsecondssleep
 centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iteration.
 '''.format(home = os.getenv('HOME'))
@@ -1175,10 +1186,13 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 							dest = os.path.join(os.path.dirname(dest) + eventname, os.path.basename(dest) )
 					# 3.4) Set convert flag
 					convertfileflag = False
-					if convert == True and fileext.lower() in ['.png', '.bmp', '.heic']:
-						dest = os.path.splitext(dest)[0]+".jpg"
-						convertfileflag = True
-						logging.info ('Convertfileflag =' + str(convertfileflag))
+					if convert:
+						if fileext.lower() in ['.png', '.bmp', '.heic']:
+							dest = os.path.splitext(dest)[0]+".jpg"
+							convertfileflag = True
+							logging.info ('Convertfileflag =' + str(convertfileflag))
+						elif fileext.lower() in ['.insp']:
+							dest += ".jpg"	# No binary conversion needed, just change extension.
 					
 					# 3.5) Checkig if it is a duplicated file.
 					while True:
@@ -1213,7 +1227,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						logging.warning ('File is beign accesed, Skipping')
 						continue
 					if itemcheck (os.path.dirname(dest)) == '':
-							if args.dummy != True:
+							if not args.dummy:
 								os.makedirs (os.path.dirname(dest))
 					# Convert to JPG Option
 					if convertfileflag == True:
@@ -1222,28 +1236,29 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						if fileext.lower() in ['.png', '.bmp']:
 							picture = Image.open (a)
 							cpicture = picture.convert('RGB')  # This eliminates png transparency
-							if args.dummy != True:
+							if not args.dummy:
 								cpicture.save (dest)
 								success = 0
 							#picture.close()  # commented for ubuntu 14.10 compatibility
 							#cpicture.close()  #
 						elif fileext.lower() in ['.heic',]:
-							if args.dummy != True:
+							if not args.dummy:
 								try:
 									success = os.system ('{}/tifig --input "{}" --output "{}"'.format(userpath,a,dest))
 								except:
 									print ('something were wrong with tifig and the file conversion of {}'.format (a))
+						# .insp files are just .jpg files, nothing to do here with the binary for this kind of files.
 						if copymode == 'm' and success == 0:
-							if args.dummy != True:
+							if not args.dummy:
 								os.remove (a)
 							logging.debug ('\t origin file successfully deleted after conversion.')
 					elif a != dest:
 						if copymode == 'm':
-							if args.dummy != True:
+							if not args.dummy:
 								shutil.move (a, dest)
 							logging.debug ('\t file successfully moved into destination.')
 						else:
-							if args.dummy != True:
+							if not args.dummy:
 								shutil.copy (a, dest)
 							logging.debug ('\t file successfully copied into destination.')
 
@@ -1252,7 +1267,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 
 					# Write metadata into the file-archive
 					if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat'] and fileext.lower() not in ['.heic',]:
-						if args.dummy != True:
+						if not args.dummy:
 							metadata = GExiv2.Metadata(dest)
 							itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
 							metadata.set_date_time(itemcreation)
@@ -1272,7 +1287,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 								logging.warning ('\tDoes not exists or is not a folder. Skipping')
 								continue			
 							if len (os.listdir(i)) == 0 and i not in {originlocation[:-1], destlocation[:-1]}:
-								if args.dummy != True:
+								if not args.dummy:
 									shutil.rmtree (i)
 								logging.debug ('\tfolder has been removed. (was empty)')
 								foldercollectionnext.add (os.path.dirname(i))
