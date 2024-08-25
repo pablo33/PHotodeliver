@@ -1184,7 +1184,14 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 								dest = os.path.join(destlocation, itemcreation.strftime('%Y'), itemcreation.strftime('%Y-%m'), os.path.basename(a))
 							# set date information in filename.
 							if ((renamemovies == True and fileext.lower()[1:] in moviesmedia) or ( renamephotos == True and fileext.lower()[1:] in photomedia)) and Imdatestart != True :
-								dest = os.path.join(os.path.dirname(dest), itemcreation.strftime('%Y%m%d_%H%M%S') + "-" + os.path.basename(dest) )
+								basename = os.path.basename(dest)
+								fdidentif = itemcreation.strftime('%Y%m%d_%H%M%S')
+								# removing nonwanted prefixes and duplicated fulldate identifiers
+								for prefix in ["VID_","IMG_", itemcreation.strftime('%Y%m%d_%H%M%S'), "_", "-"]:
+									if basename.startswith(prefix):
+										basename = basename[len(prefix):]
+								dest = os.path.join(os.path.dirname(dest), fdidentif + "-" + basename )
+								# delete non wanted prefixes
 					
 					# 3.3) Adding event name in the path
 					if eventnameflag == True:
