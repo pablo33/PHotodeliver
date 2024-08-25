@@ -1,16 +1,17 @@
 #!/usr/bin/python3
 __autor__ = "pablo33"
-__version__ = "2.1"
+__version__ = "2.2"
 __doc__ = """
 This script is intended to pre-proccess video and image files before
 you import them to your photo/video managing software.
-It moves camera file-media from one source folder to a target  on our hard disk.
+It moves camera file-media from one source folder to a target folder on our hard disk.
 it will scan for image time metadata and retrieve it from the filename if needed, 
 it will group files in folders due to its date of creation, 
 manages duplicated files (same name and bytes),
 it will not run if shotwell aplication is running,
-ir will convert heic images to .jpg images,
-as an option, it will append a .jpg extension to .insp files (insta x4 360 photos) so you can manage them with your photo software.
+it will convert heic images to .jpg images,
+it will add metadata to .mp4 files retrieved from the filename (ffmpg remux).
+it will keep running in loop.
 
 see this script at https://github.com/pablo33/PHotodeliver
 	"""
@@ -30,9 +31,10 @@ from subprocess import check_output  # Checks if some process is accessing a fil
 # Internal variables.
 # os.stat_float_times (False)  #  So you won't get milliseconds retrieving Stat dates; this will raise in error parsing getmtime.
 moviesmedia = ['mov','avi','m4v', 'mpg', '3gp', 'mp4', 'mts']  # How to identify movie files
-photomedia = ['jpg','jpeg','raw','png','bmp','heic', 'insp']  # How to identify image files
+photomedia = ['jpg','jpeg','raw','png','bmp','heic']  # How to identify image files
 wantedmedia =  photomedia + moviesmedia  # Media that is going to be proccesed
-logjustif = 20  				#  number of characters to justify logging info.
+metadatablemovies = ['mp4']		# files to be remuxed to add a creation date.
+logjustif = 20  				# number of characters to justify logging info.
 dupfoldername = 'duplicates'	# folder name to store found ducplicated files
 
 monthsdict = {
@@ -830,7 +832,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 	# ===============================
 	# The logging module.
 	# ===============================
-	loginlevel = 'DEBUG'
+	loginlevel = 'INFO'	# ['INFO', 'WARNING', 'ERROR', 'DEBUG']
 	logpath = './'
 	logging_file = os.path.join(logpath, 'Photodeliver.log')
 
@@ -962,7 +964,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 		logging.critical('centinelsecondssleep parameter is not an integer')
 
 
-	# exitting if errors econuntered
+	# Exitting if errors econuntered
 	if len (errmsgs) != 0 :
 		for a in errmsgs:
 			print (a)
@@ -970,7 +972,7 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 		exit()
 
 
-	# adding to log file Running parameters
+	# Adding to log file Running parameters
 	for a in parametersdyct:
 		text = "{0} = {1} \t (from args:{2}) \t (At config file: {3})".format (a, parametersdyct[a], eval ("args." + a), eval ("Photodelivercfg." + a))
 		logging.info (text)
@@ -980,10 +982,21 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 	if args.dummy:
 		logging.info("-------------- Running in Dummy mode ------------")
 
-	# exitting if show config was enabled.
+	# Exitting if show config was enabled.
 	if args.showconfig :
 		print ("exitting...")
 		exit()
+
+	# Checking if ffmpeg is at the system
+	ffmpeg_available = False
+	if os.system('ffmpeg --help') != 0:
+		print ('No ffmpeg tool is found. I will not able to metadate video files. (MP4)')
+		print ('You can install it by typing $sudo apt-get install ffmpeg.')
+	else:
+		print ('ffmpeg is present.')
+		ffmpeg_available = True
+
+
 
 	# ===========================================
 	# ========= Main module =====================
@@ -1191,8 +1204,6 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 							dest = os.path.splitext(dest)[0]+".jpg"
 							convertfileflag = True
 							logging.info ('Convertfileflag =' + str(convertfileflag))
-						elif fileext.lower() in ['.insp']:
-							dest += ".jpg"	# No binary conversion needed, just change extension.
 					
 					# 3.5) Checkig if it is a duplicated file.
 					while True:
@@ -1266,13 +1277,28 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						foldercollection.add (os.path.dirname(a))
 
 					# Write metadata into the file-archive
-					if storefilemetadata == True and fileext.lower()[1:] not in moviesmedia and decideflag in ['Filepath','Stat'] and fileext.lower() not in ['.heic',]:
-						if not args.dummy:
-							metadata = GExiv2.Metadata(dest)
-							itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
-							metadata.set_date_time(itemcreation)
-							metadata.save_file()
-						logging.debug ('\t' + 'writed metadata to image file.')
+					if storefilemetadata == True and (fileext.lower()[1:] not in moviesmedia or fileext.lower()[1:] in metadatablemovies) and decideflag in ['Filepath','Stat'] and fileext.lower() not in ['.heic',]:
+						itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+						## Writting on images files
+						if fileext.lower()[1:] in photomedia:
+							if not args.dummy:
+								metadata = GExiv2.Metadata(dest)
+								metadata.set_date_time(itemcreation)
+								metadata.save_file()
+							logging.debug ('\t' + 'writed metadata to image file.')
+						## Writting on video files (ffmpeg remuxing with stream-copy)
+						elif fileext.lower()[1:] in moviesmedia and ffmpeg_available and not os.path.splitext(dest)[0].endswith('_M'):
+							dest_M = os.path.splitext(dest)[0]+"_M"+os.path.splitext(dest)[1]
+							if not args.dummy:
+								dest_tmp = dest_M+'.tmp'
+								fileformat = fileext.lower()[1:]
+								ffmpeg_status = os.system (f'ffmpeg -i "{dest}" -c:a copy -c:v copy -metadata creation_time="{itemcreation}" -f {fileformat} "{dest_tmp}"')
+								if ffmpeg_status == 0:
+									os.remove(dest)
+									os.rename (src=dest_tmp, dst=dest_M)
+							logging.debug ('\t' + 'remuxed and writed metadata to video file.')
+
+
 					logging.debug ('\t' + dest)
 
 				#4) Cleaning empty directories
