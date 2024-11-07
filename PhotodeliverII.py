@@ -159,7 +159,7 @@ def Nextfilenumber (dest):
 	filename = os.path.basename (dest)
 	extension = os.path.splitext (dest)[1]
 	# extract secuence
-	expr = '\(\d{1,}\)'+extension
+	expr = r'\(\d{1,}\)'+extension
 	mo = re.search (expr, filename)
 	try:
 		grupo = mo.group()
@@ -170,7 +170,7 @@ def Nextfilenumber (dest):
 	else:
 		#  print ("Filename has a final counter expression.  (n).extension ")
 		cut = len (mo.group())
-		countergroup = (re.search ('\d{1,}', grupo))
+		countergroup = (re.search (r'\d{1,}', grupo))
 		counter = int (countergroup.group()) + 1
 	if cut == 0 :
 		newfilename = os.path.join( os.path.dirname(dest), filename + "(" + str(counter) + ")" + extension)
@@ -215,7 +215,7 @@ def yearmonthfinder (string):
 		"""
 	fy, fm = None, None
 	for ccrop in range (len (string)+1):
-		expr = ".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d).*"
+		expr = r".*(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d).*"
 		mo = re.search(expr, string[-ccrop:-ccrop+7])
 		try:
 			mo.group()
@@ -234,7 +234,7 @@ def yearmonthdayfinder (string):
 		otherwise returns None.
 		"""
 
-	expr = "(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
+	expr = r"(?P<year>[12]\d{3})[-_ /:.]?(?P<month>[01]?\d)[-_ /:.]?(?P<day>[0-3]?\d)"
 	mo = re.search(expr, string)
 	try:
 		mo.group()
@@ -253,7 +253,7 @@ def fulldatefinder (string):
 		if found, otherwise returns None"""
 	start = False
 	sep = '[-_ :.]'
-	expr = '(?P<year>[12]\d{3})%(sep)s?(?P<month>[01]?\d)%(sep)s?(?P<day>[0-3]?\d)%(sep)s?(?P<hour>[012]\d)%(sep)s?(?P<min>[0-5]\d)%(sep)s?(?P<sec>[0-5]\d)' %{'sep':'[-_ .:]'}
+	expr = r'(?P<year>[12]\d{3})%(sep)s?(?P<month>[01]?\d)%(sep)s?(?P<day>[0-3]?\d)%(sep)s?(?P<hour>[012]\d)%(sep)s?(?P<min>[0-5]\d)%(sep)s?(?P<sec>[0-5]\d)' %{'sep':'[-_ .:]'}
 	mo = re.search (expr, string)
 	try:
 		mo.group()
@@ -323,7 +323,7 @@ def mediainfo (abspath, forceassignfromfilename):
 	mintepoch = '1800'  # In order to discard low year values, this is the lowest year. 
 
 	# Try to find some date structure in folder paths. (abspath)
-	''' Fetch dates from folder structure, this prevents losing information if exif metadata 
+	r''' Fetch dates from folder structure, this prevents losing information if exif metadata 
 	doesn't exist. Metada can be lost if you modify files with software. It is also usefull 
 	if you move video files (wich doesn't have exif metadata) among cloud services.
 	Pej. you can store a folder structure in your PC client dropbox, and you'll lose your "stat" date,
@@ -559,8 +559,8 @@ def showgeneralinfo():
 def findeventname(Abranch):
 	#  /YYYY-MM XeventnameX/
 	exprlst = [
-		"/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/",
-		"[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/",
+		r"/[12]\d{3}[-_ ]?[01]\d ?(?P<XeventnameX>.*)/",
+		r"[12]\d{3}[-_ ]?[01]\d[-_ ]?[0-3]\d ?(?P<XeventnameX>.*)/",
 		]
 
 	#  /YYYY-MM-DD XeventnameX/
