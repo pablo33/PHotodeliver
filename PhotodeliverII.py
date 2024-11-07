@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 __autor__ = "pablo33"
-__version__ = "2.2"
+__version__ = "2.3"
 __doc__ = """
 This script is intended to pre-proccess video and image files before
 you import them to your photo/video managing software.
@@ -21,10 +21,9 @@ import sys, os, shutil, logging, datetime, time, re
 from glob import glob
 import argparse  # for command line arguments
 import sqlite3  # for sqlite3 Database management
- 
-import gi  # used to avoid Gi warning
-gi.require_version('GExiv2', '0.10')  # user to avoid Gi warning
-from gi.repository import GExiv2  # for metadata management. Dependencies: gir1.2-gexiv2   &   python-gobject
+
+import pyexiv2
+
 from PIL import Image  # for image conversion
 from subprocess import check_output  # Checks if some process is accessing a file
 
@@ -103,17 +102,6 @@ def addslash (text):
 	if text [-1] != '/':
 		text += '/'
 	return text
-
-def readmetadate (metadata, exif_key):
-	""" Gets a Metadata object and a tag name and returns its values
-		Metadata object is retireved form GExiv2.Metadata('path/to/file')
-		"""
-	metadate = metadata.get(exif_key)
-	if not (metadate == None or metadate.strip() == ''):
-		logging.debug (exif_key + ' found:' + metadate)
-	else:
-		logging.debug ('No '+ exif_key + 'found.')
-	return metadate
 
 def addchilddirectory(directorio):
 	""" Returns a list of child directories
@@ -299,15 +287,22 @@ def serieserial (string):
 
 def Fetchmetadata (imagepath):
 	ImageModel, ImageMake, textdate = '','', None
-	metadata = GExiv2.Metadata(imagepath)
-	
-	ImageMake = readmetadate( metadata ,'Exif.Image.Make')
-	ImageModel = readmetadate( metadata ,'Exif.Image.Model')
-	textdate = readmetadate( metadata ,'Exif.Photo.DateTimeOriginal')
-	if textdate == None:
-		textdate = readmetadate( metadata ,'Exif.Photo.DateTimeDigitized')
-		if textdate == None:
-			textdate = readmetadate( metadata ,'Exif.Image.DateTime')
+
+	def readmetadata (image:pyexiv2.Image, metadata:str):
+		try:
+			return image.read_exif()[metadata]
+		except KeyError:
+			return ""
+		
+	image = pyexiv2.Image(imagepath)
+	ImageMake = readmetadata( image ,'Exif.Image.Make')
+	ImageModel = readmetadata( image ,'Exif.Image.Model')
+	textdate = readmetadata(image, 'Exif.Photo.DateTimeOriginal')
+	if textdate == "":
+		textdate = readmetadata(image, 'Exif.Photo.DateTimeDigitized')
+		if textdate == "":
+			textdate = readmetadata(image, 'Exif.Image.DateTime')
+
 	return ImageMake, ImageModel, textdate
 
 def mediainfo (abspath, forceassignfromfilename):
@@ -379,7 +374,7 @@ def mediainfo (abspath, forceassignfromfilename):
 		# C2.1 (Year-month)
 		yearfound, monthfound = yearmonthfinder (word)
 		if yearfound != None:
-			if mintepoch < yearfound < "2038":
+			if mintepoch < yearfound < "2040":
 				fnyear = yearfound
 				fnmonth = monthfound
 				logging.debug('month and day found in C2.1 {}-{}'.format(fnyear,fnmonth))
@@ -387,7 +382,7 @@ def mediainfo (abspath, forceassignfromfilename):
 		# C3.1: (Year-month-day)
 		yearfound, monthfound, dayfound = yearmonthdayfinder (word)
 		if yearfound != None:
-			if mintepoch < yearfound < "2038":
+			if mintepoch < yearfound < "2040":
 				fnyear = yearfound
 				fnmonth = monthfound
 				fnday = dayfound
@@ -446,7 +441,7 @@ def mediainfo (abspath, forceassignfromfilename):
 	MetaDateTimeOriginal = None
 	if fileext.lower() in ['.jpg', '.jpeg', '.raw', '.png', '.insp']:
 		ImageMake, ImageModel, textdate = Fetchmetadata (abspath)
-		if textdate != None: 
+		if textdate != "": 
 			MetaDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
 
 
@@ -1289,9 +1284,12 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						## Writting on images files
 						if fileext.lower()[1:] in photomedia:
 							if not args.dummy:
-								metadata = GExiv2.Metadata(dest)
-								metadata.set_date_time(itemcreation)
-								metadata.save_file()
+								img = pyexiv2.Image(dest)
+								exif_data = {
+									'Exif.Photo.DateTimeOriginal'	: itemcreation,
+									'Exif.Image.DateTime'			: itemcreation,
+								}
+								img.modify_exif(exif_data)
 							logging.debug ('\t' + 'writed metadata to image file.')
 						## Writting on video files (ffmpeg remuxing with stream-copy)
 						elif fileext.lower()[1:] in moviesmedia and ffmpeg_available and not os.path.splitext(dest)[0].endswith('_M'):

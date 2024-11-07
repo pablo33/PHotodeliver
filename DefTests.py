@@ -3,7 +3,7 @@
 import unittest
 import PhotodeliverII
 import datetime
-
+import pyexiv2
 
 
 #####TESTS########
@@ -84,25 +84,6 @@ class addslash_tests (unittest.TestCase):
 		for data in self.mad_inputs:
 			self.assertRaises (PhotodeliverII.NotStringError, PhotodeliverII.addslash, data)
 
-class readmetadate_test (unittest.TestCase):
-	""" tests for readmetadate function
-	it must read some metadate values """
-	metadateobject = PhotodeliverII.GExiv2.Metadata('Test_examples_container/Single_image/img_1771.jpg')
-	known_values = (
-		("Exif.Image.Make", "Canon"),
-		("Exif.Image.Model", "Canon PowerShot S40"),
-		("Exif.Image.DateTime","2003:12:14 12:01:44"),
-		("Exif.Photo.DateTimeOriginal", "2003:12:14 12:01:44"),
-		("Exif.Photo.DateTimeDigitized", "2003:12:14 12:01:44"),
-		("Exif.Photo.ExposureTime","1/500"),
-		("Exif.INEXISTENT.label", None),
-		("", None),
-		)
-
-	def test_some_inputs (self):
-		for label, MTstring in self.known_values:
-			result = self.metadateobject.get(label)
-			self.assertEqual (MTstring, result)
 
 class addchilddirectory_test (unittest.TestCase):
 	"""Tests for addchilddirectory_test """
@@ -313,7 +294,7 @@ class Fetchmetadata(unittest.TestCase):
 	known_values = (
 		("Test_examples_container/Single_image/img_1771.jpg", ('Canon','Canon PowerShot S40','2003:12:14 12:01:44')),
 		("Test_examples_container/Some Photos/20160606_195355.jpg", ('SAMSUNG','SM-A300FU','2016:06:06 19:53:55')),
-		("Test_examples_container/Some Photos/Screenshot from 2016-06-07 23-45-47.png",(None, None, None))
+		("Test_examples_container/Some Photos/Screenshot from 2016-06-07 23-45-47.png",("", "", ""))
 		)
 	def test_known_values (self):
 		for string1, match in self.known_values:
