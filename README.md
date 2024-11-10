@@ -23,11 +23,24 @@ Use it to:
 
 Dependencies:
 needs at least ubuntu 14.04  
-Gexiv2  #  For metadata handling.  
-python3-pil  #  For image conversion.  
+pyexiv2  #  For metadata handling.  
+pillow  #  For image conversion.  
 tifig  # for heic image conversion.  
 ffmpeg  # for adding metadata by remuxing videos.  
 
-You can install Gexiv2 typing: 
-
-    sudo apt-get install gir1.2-gexiv2-0.10  
+on modern linux releases, use with a virtual environment.  
+Setup a virtual environment and installing dependencies:  
+`    python -m venv myvenv`  
+It will create a folder with the virtual environment.    
+Activating the virtual env and installing dependencies:    
+`   source myvenv/bin/activate`  
+`    pip install --upgrade pip`  
+`    pip install pyexiv2 pillow`  
+Then you can run the script:  
+`    python PhotodeliverII.py`  
+Deactivating the virtual env:  
+`    deactivate`  
+Installing ffmpeg:  
+`    sudo apt-get install ffmpeg`  
+for HEIC conversion to jpg, download bynary from: https://github.com/monostream/tifig/ and put it besides your script.  
+    
