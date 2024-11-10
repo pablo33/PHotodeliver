@@ -269,7 +269,7 @@ def serieserial (string):
 	seriallist = ['WA','IMG','PICT','MVI','img']
 	#seriallist = seriallist + seriallist.lower() for 
 	for key in seriallist :
-		expr = '(?P<se>%s%s?)(?P<sn>[0-9]{4})'%(key,sep)
+		expr = r'(?P<se>%s%s?)(?P<sn>[0-9]{4})'%(key,sep)
 
 		mo = re.search (expr, string)
 		try:
@@ -310,7 +310,7 @@ def mediainfo (abspath, forceassignfromfilename):
 	#1) Retrieve basic info from the file
 	logging.debug ('## item: {}'.format(abspath))
 	filename, fileext = os.path.splitext(os.path.basename (abspath))
-	Statdate = datetime.datetime.utcfromtimestamp(os.path.getmtime (abspath))
+	Statdate = datetime.datetime.fromtimestamp(os.path.getmtime (abspath), tz=datetime.timezone.utc)
 	filebytes = os.path.getsize(abspath)  # logging.debug ('fileTepoch (from Stat): '.ljust( logjustif ) + str(fileTepoch))
 	fnDateTimeOriginal = None  # From start we assume a no date found on the file path
 
@@ -441,8 +441,8 @@ def mediainfo (abspath, forceassignfromfilename):
 	MetaDateTimeOriginal = None
 	if fileext.lower() in ['.jpg', '.jpeg', '.raw', '.png', '.insp']:
 		ImageMake, ImageModel, textdate = Fetchmetadata (abspath)
-		if textdate != "": 
-			MetaDateTimeOriginal = datetime.datetime.strptime (textdate, '%Y:%m:%d %H:%M:%S')
+		if textdate != "":
+			MetaDateTimeOriginal = datetime.datetime.strptime (textdate, r'%Y:%m:%d %H:%M:%S')
 
 
 	# Decide media date of creation
@@ -1280,14 +1280,14 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 
 					# Write metadata into the file-archive
 					if storefilemetadata == True and (fileext.lower()[1:] not in moviesmedia or fileext.lower()[1:] in metadatablemovies) and decideflag in ['Filepath','Stat'] and fileext.lower() not in ['.heic',]:
-						itemcreation = datetime.datetime.strptime (Timeoriginal, '%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
+						itemcreation = datetime.datetime.strptime (Timeoriginal, r'%Y-%m-%d %H:%M:%S')  # Item has a valid date, casting it to a datetime object.
 						## Writting on images files
 						if fileext.lower()[1:] in photomedia:
 							if not args.dummy:
 								img = pyexiv2.Image(dest)
 								exif_data = {
-									'Exif.Photo.DateTimeOriginal'	: itemcreation,
-									'Exif.Image.DateTime'			: itemcreation,
+									'Exif.Photo.DateTimeOriginal'	: itemcreation.strftime(r'%Y:%m:%d %H:%M:%S'),
+									'Exif.Image.DateTime'			: itemcreation.strftime(r'%Y:%m:%d %H:%M:%S'),
 								}
 								img.modify_exif(exif_data)
 							logging.debug ('\t' + 'writed metadata to image file.')
