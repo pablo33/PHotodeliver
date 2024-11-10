@@ -286,22 +286,25 @@ def serieserial (string):
 	return None, None
 
 def Fetchmetadata (imagepath):
-	ImageModel, ImageMake, textdate = '','', None
+	ImageModel, ImageMake, textdate = '','',''
 
 	def readmetadata (image:pyexiv2.Image, metadata:str):
 		try:
 			return image.read_exif()[metadata]
 		except KeyError:
-			return ""
+			return ''
 		
-	image = pyexiv2.Image(imagepath)
-	ImageMake = readmetadata( image ,'Exif.Image.Make')
-	ImageModel = readmetadata( image ,'Exif.Image.Model')
-	textdate = readmetadata(image, 'Exif.Photo.DateTimeOriginal')
-	if textdate == "":
-		textdate = readmetadata(image, 'Exif.Photo.DateTimeDigitized')
+	try:
+		image = pyexiv2.Image(imagepath)
+		ImageMake = readmetadata( image ,'Exif.Image.Make')
+		ImageModel = readmetadata( image ,'Exif.Image.Model')
+		textdate = readmetadata(image, 'Exif.Photo.DateTimeOriginal')
 		if textdate == "":
-			textdate = readmetadata(image, 'Exif.Image.DateTime')
+			textdate = readmetadata(image, 'Exif.Photo.DateTimeDigitized')
+			if textdate == "":
+				textdate = readmetadata(image, 'Exif.Image.DateTime')
+	except RuntimeError:
+		logging.warning("Can't retrieve metadata from file. Maybe it is corrupted:" + imagepath)
 
 	return ImageMake, ImageModel, textdate
 
@@ -1284,13 +1287,16 @@ centinelsecondssleep = 300  #  Number of seconds to sleep after doing an iterati
 						## Writting on images files
 						if fileext.lower()[1:] in photomedia:
 							if not args.dummy:
-								img = pyexiv2.Image(dest)
-								exif_data = {
-									'Exif.Photo.DateTimeOriginal'	: itemcreation.strftime(r'%Y:%m:%d %H:%M:%S'),
-									'Exif.Image.DateTime'			: itemcreation.strftime(r'%Y:%m:%d %H:%M:%S'),
-								}
-								img.modify_exif(exif_data)
-							logging.debug ('\t' + 'writed metadata to image file.')
+								try:
+									img = pyexiv2.Image(dest)
+									exif_data = {
+										'Exif.Photo.DateTimeOriginal'	: itemcreation.strftime(r'%Y:%m:%d %H:%M:%S'),
+										'Exif.Image.DateTime'			: itemcreation.strftime(r'%Y:%m:%d %H:%M:%S'),
+									}
+									img.modify_exif(exif_data)
+									logging.debug ('\t' + 'writed metadata to image file.')
+								except RuntimeError:
+									logging.warning ("Can't write metadata to the image. Maybe it is corrupted:" + a)
 						## Writting on video files (ffmpeg remuxing with stream-copy)
 						elif fileext.lower()[1:] in moviesmedia and ffmpeg_available and not os.path.splitext(dest)[0].endswith('_M'):
 							dest_M = os.path.splitext(dest)[0]+"_M"+os.path.splitext(dest)[1]
